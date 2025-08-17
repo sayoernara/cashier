@@ -1,0 +1,74 @@
+body {
+  overflow-y: scroll; /* tetap bisa scroll */
+  scrollbar-width: none; /* Firefox */
+}
+
+/* Chrome, Edge, Safari */
+body::-webkit-scrollbar {
+  display: none;
+}
+
+
+/* Scrollbar modern untuk daftar barang */
+.goods-list {
+  max-height: 400px; /* atau sesuai kebutuhan */
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+/* untuk Chrome, Edge, Safari */
+.goods-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.goods-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.goods-list::-webkit-scrollbar-thumb {
+  background: #a0aec0;   /* abu tipis */
+  border-radius: 10px;
+}
+
+.goods-list::-webkit-scrollbar-thumb:hover {
+  background: #718096;   /* lebih gelap saat hover */
+}
+
+/* untuk Firefox */
+.goods-list {
+  scrollbar-width: thin;
+  scrollbar-color: #a0aec0 transparent;
+}
+
+
+
+/* Scrollbar modern untuk daftar cartlist */
+.cartitemlist {
+  max-height: 400px; /* atau sesuai kebutuhan */
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+/* untuk Chrome, Edge, Safari */
+.cartitemlist::-webkit-scrollbar {
+  width: 6px;
+}
+
+.cartitemlist::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.cartitemlist::-webkit-scrollbar-thumb {
+  background: #a0aec0;   /* abu tipis */
+  border-radius: 10px;
+}
+
+.cartitemlist::-webkit-scrollbar-thumb:hover {
+  background: #718096;   /* lebih gelap saat hover */
+}
+
+/* untuk Firefox */
+.cartitemlist {
+  scrollbar-width: thin;
+  scrollbar-color: #a0aec0 transparent;
+}
