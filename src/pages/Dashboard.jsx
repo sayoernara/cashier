@@ -11,6 +11,9 @@ function Dashboard() {
   const [currentCustomer, setCurrentCustomer] = useState(0);
   const [cart, setCart] = useState([]);
   const [showModal, setShowModal] = useState(false);
+  const [showModalCstmW, setShowModalCstmW] = useState(false);
+  const [selectedIdItem, setSelectedIdItem] = useState('');
+  const [selectedItemNm, setSelectedItemNm] = useState('');
 
   const handleCloseModal = () => setShowModal(false);
   const handleShowModal = () => {
@@ -19,6 +22,16 @@ function Dashboard() {
     }
   };
 
+  const handleCloseModalCstmW = () => {
+    setSelectedIdItem('');
+    setSelectedItemNm('');
+    setShowModalCstmW(false);
+  };
+  const handleShowModalCstmW = (id, itemnm) => {
+    setSelectedIdItem(id);
+    setSelectedItemNm(itemnm);
+    setShowModalCstmW(true);
+  };
 
   const fetchGoods = useCallback(async () => {
     try {
@@ -160,43 +173,63 @@ function Dashboard() {
               }}
             >
               <Row className="g-2">
-                {filteredComodities.map((comodity, idx) => (
-                  <Col key={idx} xs={12} sm={6} md={4} lg={6}>
-                    <Card className="h-100 shadow-sm border-0">
-                      <Card.Body>
-                        <Card.Title className="fs-6 fw-bold">
-                          {comodity}
-                        </Card.Title>
-                        <div className="d-flex flex-wrap gap-2 mt-3">
-                          {groupedGoods[comodity].map((sub, i) => (
-                            <Card
-                              key={i}
-                              className="p-2 text-center flex-fill border shadow-sm"
-                              style={{
-                                minWidth: "80px",
-                                flex: "0 0 auto",
-                                cursor: "pointer",
-                              }}
-                              onClick={() =>
-                                addToCart(
-                                  comodity,
-                                  sub.id_item,
-                                  sub.weight_Gr,
-                                  sub.price_per_Gr
-                                )
-                              }
-                            >
-                              <div className="fw-bold">{sub.weight_Gr} gr</div>
-                              <div className="text-primary small">
-                                Rp {parseInt(sub.price_per_Gr).toLocaleString()}
-                              </div>
-                            </Card>
-                          ))}
-                        </div>
-                      </Card.Body>
-                    </Card>
-                  </Col>
-                ))}
+                {filteredComodities.map((comodity, idx) => {
+                  const representativeItem = groupedGoods[comodity]?.[0];
+
+                  return (
+                    <Col key={idx} xs={12} sm={6} md={4} lg={6}>
+                      <Card className="h-100 shadow-sm border-0">
+                        <Card.Body>
+                          <Card.Title className="fs-6 fw-bold">
+                            {comodity}
+                          </Card.Title>
+                          <div className="d-flex flex-wrap gap-2 mt-3">
+                            {groupedGoods[comodity].map((sub, i) => (
+                              <Card
+                                key={i}
+                                className="p-2 text-center flex-fill border shadow-sm"
+                                style={{
+                                  minWidth: "80px",
+                                  flex: "0 0 auto",
+                                  cursor: "pointer",
+                                }}
+                                onClick={() =>
+                                  addToCart(
+                                    comodity,
+                                    sub.id_item,
+                                    sub.weight_Gr,
+                                    sub.price_per_Gr
+                                  )
+                                }
+                              >
+                                <div className="fw-bold">{sub.weight_Gr} gr</div>
+                                <div className="text-primary small">
+                                  Rp {parseInt(sub.price_per_Gr).toLocaleString()}
+                                </div>
+                              </Card>
+                            ))}
+                            {representativeItem && (
+                              <Card
+                                className="p-2 d-flex align-items-center justify-content-center border shadow-sm text-center"
+                                style={{
+                                  minWidth: "80px",
+                                  minHeight: "80px",
+                                  flex: "0 0 auto",
+                                  cursor: "pointer",
+                                  backgroundColor: '#3498db',
+                                  color: 'white',
+                                }}
+                                onClick={() => handleShowModalCstmW(representativeItem.id_item, comodity)}
+                              >
+                                CSTM<br /> Weight
+                              </Card>
+                            )}
+                          </div>
+                        </Card.Body>
+                      </Card>
+                    </Col>
+                  );
+                })}
               </Row>
             </div>
           )}
@@ -330,6 +363,23 @@ function Dashboard() {
           </Button>
           <Button variant="primary" onClick={handleCloseModal}>
             Konfirmasi & Cetak Struk
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      <Modal show={showModalCstmW} onHide={handleCloseModalCstmW} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Custom Weight {selectedItemNm}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleCloseModal}>
+            Tutup
+          </Button>
+          <Button variant="primary" onClick={handleCloseModal}>
+            Tambahkan ke keranjang
           </Button>
         </Modal.Footer>
       </Modal>
