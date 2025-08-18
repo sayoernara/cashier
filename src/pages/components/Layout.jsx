@@ -64,14 +64,15 @@ function MainLayout() {
         className="navbar navbar-expand-lg shadow-sm"
         style={{
           backgroundColor: 'white',
-          padding: '0.75rem 0.5rem',
+          padding: '0.75rem 1.5rem',
           borderBottom: '1px solid #eaeaea',
           position: 'sticky',
           top: 0,
           zIndex: 1000
         }}
       >
-        <div className="container-fluid">
+        <div className="container-fluid d-flex align-items-center">
+          {/* Kiri - Brand */}
           <NavLink
             to="/dashboard"
             className="navbar-brand fw-bold text-primary"
@@ -80,23 +81,48 @@ function MainLayout() {
             Sayoernara | {rname}
           </NavLink>
 
-          {/* Navbar Content */}
-          <div className="collapse navbar-collapse" id="navbarContent">
-            <ul className="navbar-nav ms-auto align-items-lg-center mt-3 mt-lg-0">
-              <li className="nav-item">
-                <Link
-                  className="nav-link text-danger fw-semibold d-flex align-items-center gap-1"
-                  onClick={handleLogoutClick}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <IoMdLogOut size={20} /> Logout
-                </Link>
-              </li>
-            </ul>
+          {/* Tengah - Menu */}
+          <div className="px-4 py-2 rounded d-flex gap-4 mx-auto">
+            <NavLink
+              to="/dashboard"
+              className={({ isActive }) =>
+                `nav-link ${isActive ? "fw-bold text-primary" : "text-dark"}`
+              }
+            >
+              Regular
+            </NavLink>
+            <NavLink
+              to="/retur"
+              className={({ isActive }) =>
+                `nav-link ${isActive ? "fw-bold text-primary" : "text-dark"}`
+              }
+            >
+              Retur
+            </NavLink>
+            <NavLink
+              to="/transaksi"
+              className={({ isActive }) =>
+                `nav-link ${isActive ? "fw-bold text-primary" : "text-dark"}`
+              }
+            >
+              Transaksi
+            </NavLink>
           </div>
+
+          {/* Kanan - Logout */}
+          <ul className="navbar-nav ms-auto align-items-lg-center mt-3 mt-lg-0">
+            <li className="nav-item">
+              <Link
+                className="nav-link text-danger fw-semibold d-flex align-items-center gap-1"
+                onClick={handleLogoutClick}
+                style={{ cursor: 'pointer' }}
+              >
+                <IoMdLogOut size={20} /> 
+              </Link>
+            </li>
+          </ul>
         </div>
       </nav>
-
 
 
       {/* Layout container */}
@@ -106,7 +132,7 @@ function MainLayout() {
           className="flex-grow-1 p-0"
           style={{
             backgroundColor: '#f4f6f8',
-            minHeight: 'calc(100vh - 70px)', 
+            minHeight: 'calc(100vh - 70px)',
           }}
         >
           <Outlet />

@@ -1,7 +1,8 @@
 import React, { useCallback, useState, useEffect } from 'react';
-import { getGoodsList } from './apis/api';
-import { Alert, Col, Row, Spinner, Card, Button, Modal } from 'react-bootstrap';
+import { getGoodsList, getGoodsPricePerGram } from './apis/api';
+import { Alert, Col, Row, Spinner, Card, Button, Modal, Form } from 'react-bootstrap';
 import { BiCart } from 'react-icons/bi';
+import { CiImageOff } from 'react-icons/ci';
 
 function Dashboard() {
   const [loadingGoods, setLoadingGoods] = useState(false);
@@ -14,6 +15,10 @@ function Dashboard() {
   const [showModalCstmW, setShowModalCstmW] = useState(false);
   const [selectedIdItem, setSelectedIdItem] = useState('');
   const [selectedItemNm, setSelectedItemNm] = useState('');
+  const [errorLoadingGoodsPrice, setErrorLoadingGoodsPrice] = useState(null);
+  const [goodsPrice, setGoodsPrice] = useState([]);
+  const [kgValue, setKgValue] = useState(0);
+  const [gramValue, setGramValue] = useState(0);
 
   const handleCloseModal = () => setShowModal(false);
   const handleShowModal = () => {
@@ -31,6 +36,7 @@ function Dashboard() {
     setSelectedIdItem(id);
     setSelectedItemNm(itemnm);
     setShowModalCstmW(true);
+    fetchGoodsPricePerGram(id);
   };
 
   const fetchGoods = useCallback(async () => {
@@ -44,6 +50,19 @@ function Dashboard() {
       setLoadingGoods(false);
     }
   }, []);
+
+  const fetchGoodsPricePerGram = useCallback(async (selectedIdItem) => {
+    try{
+      setErrorLoadingGoodsPrice(true);
+      const result = await getGoodsPricePerGram(selectedIdItem);
+      setGoodsPrice(result.data.price[0]);
+      console.log(result.data.price[0]);
+    } catch (err) {
+      setErrorLoadingGoods(err.message);
+    } finally {
+      setErrorLoadingGoodsPrice(false);
+    }
+  });
 
   useEffect(() => {
     fetchGoods();
@@ -145,6 +164,37 @@ function Dashboard() {
   );
 
 
+   // ambil harga sesuai weight_Gr, kalau gak ada → fallback ke per kg / per 50g
+  const getPrice = (weight) => {
+    const found = goodsPrice.find(
+      (g) => parseInt(g.weight_Gr, 10) === weight
+    );
+    if (found) return parseInt(found.price_per_Gr, 10);
+
+    // fallback: kalau kelipatan 1000 → ambil harga 1kg × banyak kilo
+    if (weight % 1000 === 0) {
+      const base = goodsPrice.find((g) => parseInt(g.weight_Gr, 10) === 1000);
+      return base ? (weight / 1000) * parseInt(base.price_per_Gr, 10) : 0;
+    }
+
+    // fallback: kalau kelipatan 50 → ambil harga 50g × banyak kelipatan
+    if (weight % 50 === 0) {
+      const base = goodsPrice.find((g) => parseInt(g.weight_Gr, 10) === 50);
+      return base ? (weight / 50) * parseInt(base.price_per_Gr, 10) : 0;
+    }
+
+    return 0;
+  };
+
+  // Hitungan berdasarkan slider
+  const kgInGram = kgValue * 1000;
+  const priceKg = kgValue > 0 ? getPrice(kgInGram) : 0;
+  const priceGram = gramValue > 0 ? getPrice(gramValue) : 0;
+
+  const totalWeight = kgInGram + gramValue;
+  const totalPrice = priceKg + priceGram;
+
+
   return (
     <div className="container py-4">
       <Row>
@@ -175,7 +225,6 @@ function Dashboard() {
               <Row className="g-2">
                 {filteredComodities.map((comodity, idx) => {
                   const representativeItem = groupedGoods[comodity]?.[0];
-
                   return (
                     <Col key={idx} xs={12} sm={6} md={4} lg={6}>
                       <Card className="h-100 shadow-sm border-0">
@@ -183,6 +232,23 @@ function Dashboard() {
                           <Card.Title className="fs-6 fw-bold">
                             {comodity}
                           </Card.Title>
+                          {representativeItem.img ? (
+                            <img
+                              src={representativeItem.img}
+                              alt={comodity}
+                              className="img-fluid itemimgcenter"
+                            />
+                          ) : (
+                            <CiImageOff size={150} className="text-secondary"
+                            style={{
+                              display: 'block',
+                              margin: '0 auto',
+                              width: '45%',
+                              height: 'auto'
+                            }} 
+                            />
+                          )}
+
                           <div className="d-flex flex-wrap gap-2 mt-3">
                             {groupedGoods[comodity].map((sub, i) => (
                               <Card
@@ -260,7 +326,7 @@ function Dashboard() {
           <div style={{
             backgroundColor: '#f8f9fa',
             borderRadius: '5px',
-            height: "calc(100vh - 310px)",
+            height: "calc(100vh - 400px)",
             display: "flex",
             flexDirection: "column"
           }}>
@@ -367,13 +433,47 @@ function Dashboard() {
         </Modal.Footer>
       </Modal>
 
-      <Modal show={showModalCstmW} onHide={handleCloseModalCstmW} centered>
+      <Modal show={showModalCstmW} onHide={handleCloseModalCstmW} centered size='lg'>
         <Modal.Header closeButton>
-          <Modal.Title>Custom Weight {selectedItemNm}</Modal.Title>
+          <Modal.Title>Kustomisasi berat {selectedItemNm}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
+        {/* Range per KG */}
+        <Form.Group className="mb-4">
+          <Form.Label>
+            Berat (Kg): {kgValue} kg{" "}
+            {priceKg > 0 && <span className="text-success">Rp {priceKg.toLocaleString()}</span>}
+          </Form.Label>
+          <Form.Range
+            min={0}
+            max={20}
+            step={1}
+            value={kgValue}
+            onChange={(e) => setKgValue(parseInt(e.target.value))}
+          />
+        </Form.Group>
 
-        </Modal.Body>
+        {/* Range per Gram */}
+        <Form.Group>
+          <Form.Label>
+            Berat (Gram): {gramValue} g{" "}
+            {priceGram > 0 && <span className="text-success">Rp {priceGram.toLocaleString()}</span>}
+          </Form.Label>
+          <Form.Range
+            min={0}
+            max={950}
+            step={50}
+            value={gramValue}
+            onChange={(e) => setGramValue(parseInt(e.target.value))}
+          />
+        </Form.Group>
+
+        {/* Total */}
+        <div className="mt-4 p-3 border rounded bg-light">
+          <strong>Total:</strong> {totalWeight / 1000} kg ({totalWeight} g) <br />
+          <strong>Harga:</strong> Rp {totalPrice.toLocaleString()}
+        </div>
+      </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={handleCloseModal}>
             Tutup

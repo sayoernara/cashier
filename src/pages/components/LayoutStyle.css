@@ -41,7 +41,6 @@ body::-webkit-scrollbar {
 }
 
 
-
 /* Scrollbar modern untuk daftar cartlist */
 .cartitemlist {
   max-height: 400px; /* atau sesuai kebutuhan */
@@ -71,4 +70,14 @@ body::-webkit-scrollbar {
 .cartitemlist {
   scrollbar-width: thin;
   scrollbar-color: #a0aec0 transparent;
+}
+
+.itemimgcenter {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  width: auto; 
+  height: 150px; 
+  object-fit: cover; 
+  border-radius: 8px; 
 }

@@ -99,3 +99,12 @@ export const getGoodsList = async() => {
         return error.response || { status: 500, data: { message: error.message || 'Terjadi kesalahan' } };
     }
 }
+
+export const getGoodsPricePerGram = async(id_item) => {
+    try{
+        const response = await axios.get(`${API_BASE_URL}cashier/goodspricepergram?id_item=${id_item}`, { withCredentials: true });
+        return response
+    } catch (error) {
+        return error.response || { status: 500, data: { message: error.message || 'Terjadi kesalahan' } };
+    }
+}
