@@ -1,6 +1,6 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import { getGoodsList, getGoodsPricePerGram } from './apis/api';
-import { Alert, Col, Row, Spinner, Card, Button, Modal, Form } from 'react-bootstrap';
+import { Alert, Col, Row, Spinner, Card, Button, Modal, Form, InputGroup } from 'react-bootstrap';
 import { BiCart } from 'react-icons/bi';
 import { CiImageOff } from 'react-icons/ci';
 
@@ -31,6 +31,9 @@ function Dashboard() {
     setSelectedIdItem('');
     setSelectedItemNm('');
     setShowModalCstmW(false);
+    setGoodsPrice([]);
+    setKgValue(0);
+    setGramValue(0);
   };
   const handleShowModalCstmW = (id, itemnm) => {
     setSelectedIdItem(id);
@@ -52,7 +55,7 @@ function Dashboard() {
   }, []);
 
   const fetchGoodsPricePerGram = useCallback(async (selectedIdItem) => {
-    try{
+    try {
       setErrorLoadingGoodsPrice(true);
       const result = await getGoodsPricePerGram(selectedIdItem);
       setGoodsPrice(result.data.price[0]);
@@ -164,7 +167,7 @@ function Dashboard() {
   );
 
 
-   // ambil harga sesuai weight_Gr, kalau gak ada → fallback ke per kg / per 50g
+  // ambil harga sesuai weight_Gr, kalau gak ada → fallback ke per kg / per 50g
   const getPrice = (weight) => {
     const found = goodsPrice.find(
       (g) => parseInt(g.weight_Gr, 10) === weight
@@ -190,10 +193,29 @@ function Dashboard() {
   const kgInGram = kgValue * 1000;
   const priceKg = kgValue > 0 ? getPrice(kgInGram) : 0;
   const priceGram = gramValue > 0 ? getPrice(gramValue) : 0;
-
   const totalWeight = kgInGram + gramValue;
   const totalPrice = priceKg + priceGram;
 
+  // Tambahan: Input dan tombol untuk KG
+  const handleKgInputChange = (e) => {
+    const value = parseInt(e.target.value, 10);
+    setKgValue(isNaN(value) ? 0 : value);
+  };
+
+  const handleIncrementKg = () => {
+    setKgValue((prevKg) => prevKg + 1);
+  };
+
+  const handleDecrementKg = () => {
+    setKgValue((prevKg) => Math.max(0, prevKg - 1));
+  };
+
+  const handleAddToCartFromModal = (selectedItemNm, selectedIdItem, totalWeight, totalPrice) => {
+    if (totalWeight > 0 && totalPrice > 0) {
+      addToCart(selectedItemNm, selectedIdItem, totalWeight, totalPrice);
+    }
+    handleCloseModalCstmW();
+  }
 
   return (
     <div className="container py-4">
@@ -240,12 +262,12 @@ function Dashboard() {
                             />
                           ) : (
                             <CiImageOff size={150} className="text-secondary"
-                            style={{
-                              display: 'block',
-                              margin: '0 auto',
-                              width: '45%',
-                              height: 'auto'
-                            }} 
+                              style={{
+                                display: 'block',
+                                margin: '0 auto',
+                                width: '45%',
+                                height: 'auto'
+                              }}
                             />
                           )}
 
@@ -438,48 +460,68 @@ function Dashboard() {
           <Modal.Title>Kustomisasi berat {selectedItemNm}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-        {/* Range per KG */}
-        <Form.Group className="mb-4">
-          <Form.Label>
-            Berat (Kg): {kgValue} kg{" "}
-            {priceKg > 0 && <span className="text-success">Rp {priceKg.toLocaleString()}</span>}
-          </Form.Label>
-          <Form.Range
-            min={0}
-            max={20}
-            step={1}
-            value={kgValue}
-            onChange={(e) => setKgValue(parseInt(e.target.value))}
-          />
-        </Form.Group>
+          {/* Input Group untuk KG */}
+          <Form.Group className="mb-4">
+            <Form.Label>
+              Berat (Kg): {kgValue} kg{" "}
+              {priceKg > 0 && <span className="text-success">Rp {priceKg.toLocaleString()}</span>}
+            </Form.Label>
 
-        {/* Range per Gram */}
-        <Form.Group>
-          <Form.Label>
-            Berat (Gram): {gramValue} g{" "}
-            {priceGram > 0 && <span className="text-success">Rp {priceGram.toLocaleString()}</span>}
-          </Form.Label>
-          <Form.Range
-            min={0}
-            max={950}
-            step={50}
-            value={gramValue}
-            onChange={(e) => setGramValue(parseInt(e.target.value))}
-          />
-        </Form.Group>
+            {/* Kombinasi Tombol dan Input Field */}
+            <InputGroup className="mb-2">
+              <Button variant="outline-secondary" onClick={handleDecrementKg}>
+                -
+              </Button>
+              <Form.Control
+                type="number"
+                value={kgValue}
+                onChange={handleKgInputChange}
+                placeholder="Masukkan berat (kg)"
+                className="text-center"
+              />
+              <Button variant="outline-secondary" onClick={handleIncrementKg}>
+                +
+              </Button>
+            </InputGroup>
 
-        {/* Total */}
-        <div className="mt-4 p-3 border rounded bg-light">
-          <strong>Total:</strong> {totalWeight / 1000} kg ({totalWeight} g) <br />
-          <strong>Harga:</strong> Rp {totalPrice.toLocaleString()}
-        </div>
-      </Modal.Body>
+            {/* Slider untuk penyesuaian cepat (0-20kg) */}
+            <Form.Range
+              min={0}
+              max={20} // Batas slider tetap 20 untuk kemudahan penggunaan
+              step={1}
+              // Nilai slider akan mentok di 20, meskipun nilai state kgValue bisa lebih
+              value={Math.min(kgValue, 20)}
+              onChange={(e) => setKgValue(parseInt(e.target.value, 10))}
+            />
+          </Form.Group>
+
+          {/* Range per Gram (Tidak berubah) */}
+          <Form.Group>
+            <Form.Label>
+              Berat (Gram): {gramValue} g{" "}
+              {priceGram > 0 && <span className="text-success">Rp {priceGram.toLocaleString()}</span>}
+            </Form.Label>
+            <Form.Range
+              min={0}
+              max={950}
+              step={50}
+              value={gramValue}
+              onChange={(e) => setGramValue(parseInt(e.target.value))}
+            />
+          </Form.Group>
+
+          {/* Total (Tidak berubah) */}
+          <div className="mt-4 p-3 border rounded bg-light">
+            <strong>Total:</strong> {totalWeight / 1000} kg ({totalWeight} g) <br />
+            <strong>Harga:</strong> Rp {totalPrice.toLocaleString()}
+          </div>
+        </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={handleCloseModal}>
+          <Button variant="secondary" onClick={handleCloseModalCstmW}>
             Tutup
           </Button>
-          <Button variant="primary" onClick={handleCloseModal}>
-            Tambahkan ke keranjang
+          <Button variant="primary" onClick={() => handleAddToCartFromModal(selectedItemNm, selectedIdItem, totalWeight, totalPrice)}>
+            Tambahkan ke keranjang customer {currentCustomer + 1}
           </Button>
         </Modal.Footer>
       </Modal>
