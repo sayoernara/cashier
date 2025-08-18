@@ -32,10 +32,12 @@ export const login = async(username, password) => {
     try{
         const sanitizedUsername = sanitizeInput(username);
         const sanitizedPassword = sanitizeInput(password);
+        const roleid = 3;
 
         const response = await axios.post(`${API_BASE_URL}login`,{
             username: sanitizedUsername,
-            password: sanitizedPassword
+            password: sanitizedPassword,
+            roleid: roleid
         }, {withCredentials: true})
         const datalog = response.data.authData.info
         const name = datalog.nama;
@@ -103,6 +105,15 @@ export const getGoodsList = async() => {
 export const getGoodsPricePerGram = async(id_item) => {
     try{
         const response = await axios.get(`${API_BASE_URL}cashier/goodspricepergram?id_item=${id_item}`, { withCredentials: true });
+        return response
+    } catch (error) {
+        return error.response || { status: 500, data: { message: error.message || 'Terjadi kesalahan' } };
+    }
+}
+
+export const countPrice = async(barang) => {
+    try{
+        const response = await axios.post(`${API_BASE_URL}cashier/countprice`, { cart: barang }, { withCredentials: true });
         return response
     } catch (error) {
         return error.response || { status: 500, data: { message: error.message || 'Terjadi kesalahan' } };
