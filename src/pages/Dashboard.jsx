@@ -1,6 +1,6 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import { countPrice, getGoodsList, getGoodsPricePerGram } from './apis/api';
-import { Alert, Col, Row, Spinner, Card, Button, Modal, Form, InputGroup } from 'react-bootstrap';
+import { Alert, Col, Row, Spinner, Card, Button, Modal, Form, InputGroup, ListGroup, Table } from 'react-bootstrap';
 import { BiCart } from 'react-icons/bi';
 import { CiImageOff } from 'react-icons/ci';
 import Swal from 'sweetalert2';
@@ -23,6 +23,9 @@ function Dashboard() {
   const [resultCountPrice, setResultCounPrice] = useState([]);
   const [loadingCountPrice, setLoadingCountPrice] = useState(false);
   const [errorCountPrice, setErrorCountPrice] = useState(null);
+  const [discounts, setDiscounts] = useState([]);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const DISCOUNT_STEP = 500;
 
   const handleCloseModal = () => {
     setShowModal(false)
@@ -67,7 +70,7 @@ function Dashboard() {
       setErrorLoadingGoodsPrice(true);
       const result = await getGoodsPricePerGram(selectedIdItem);
       setGoodsPrice(result.data.price[0]);
-      console.log(result.data.price[0]);
+      // console.log(result.data.price[0]);
     } catch (err) {
       setErrorLoadingGoods(err.message);
     } finally {
@@ -89,7 +92,7 @@ function Dashboard() {
       }
       const result = await countPrice(carts);
       setResultCounPrice(result.data.cart);
-      console.log('fetch counter price : ', result.data.cart);
+      // console.log('fetch counter price : ', result.data.cart);
     } catch (err) {
       setErrorCountPrice(err.message);
     } finally {
@@ -246,6 +249,31 @@ function Dashboard() {
     }
     handleCloseModalCstmW();
   }
+
+  const handleDiscountChange = (index, operation, itemPrice) => {
+  const newDiscounts = [...discounts];
+  const currentDiscount = parseInt(newDiscounts[index] || 0, 10);
+  let newValue = currentDiscount;
+  if (operation === 'increase') {
+    newValue = Math.min(currentDiscount + DISCOUNT_STEP, parseInt(itemPrice, 10));
+  } else if (operation === 'decrease') {
+    newValue = Math.max(currentDiscount - DISCOUNT_STEP, 0);
+  }
+  console.log(`Item index: ${index}, Operation: ${operation}, Old Discount: ${currentDiscount}, New Discount: ${newValue}`);
+  newDiscounts[index] = newValue;
+  setDiscounts(newDiscounts);
+};
+
+  const handlePaymentChange = (e) => {
+    const value = e.target.value.replace(/[^0-9]/g, "");
+    setPaymentAmount(value);
+  };
+
+  // --- Kalkulasi untuk ditampilkan ---
+  const subtotal = resultCountPrice.reduce((sum, item) => sum + item.totalPrice, 0);
+  const totalDiscount = discounts.reduce((sum, discount) => sum + (discount || 0), 0);
+  const grandTotal = subtotal - totalDiscount;
+  const change = parseInt(paymentAmount || 0, 10) - grandTotal;
 
   return (
     <div className="container py-4">
@@ -416,7 +444,6 @@ function Dashboard() {
                   </ul>
                 </div>
 
-                {/* area fixed untuk total + tombol */}
                 <div className="mt-2">
                   {cart.length > 0 && (
                     <li className="list-group-item d-flex justify-content-between align-items-center fw-bold">
@@ -449,81 +476,136 @@ function Dashboard() {
         </Col>
       </Row>
 
-      <Modal show={showModal} onHide={handleCloseModal} centered>
-        <Modal.Header closeButton>
-          <Modal.Title>Konfirmasi Transaksi</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <p>
-            Berikut adalah rincian belanja untuk <strong>Customer #{currentCustomer + 1}</strong>:
-          </p>
+      <Modal show={showModal} onHide={handleCloseModal} centered size="lg">
+      <Modal.Header closeButton>
+        <Modal.Title>Konfirmasi Transaksi</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        <p>
+          Rincian belanja untuk <strong>Customer #{currentCustomer + 1}</strong>:
+        </p>
 
-          <ul className="list-group list-group-flush">
-            {loadingCountPrice ? (
-              <div
-                className="d-flex justify-content-center align-items-center"
-                style={{ height: "85vh" }}
-              >
-                <Spinner
-                  animation="border"
-                  variant="primary"
-                  role="status"
-                  style={{ width: "4rem", height: "4rem" }}
-                />
-              </div>
-            ) : (
-              <>
-                {errorCountPrice && <Alert variant="danger">{errorCountPrice}</Alert>}
-                {resultCountPrice.map((item, idx) => (
-                  <li
-                    key={idx}
-                    className="list-group-item d-flex flex-column"
-                  >
-                    <div className="d-flex justify-content-between align-items-center">
-                      <div>
-                        <strong>{item.comodity}</strong>
-                        <div className="text-muted small">{item.totalWeight} gr</div>
-                      </div>
-                      <span className="fw-bold">
-                        Rp {item.totalPrice.toLocaleString()}
+        {loadingCountPrice ? (
+          <div className="d-flex justify-content-center p-5">
+            <Spinner animation="border" variant="primary" />
+          </div>
+        ) : errorCountPrice ? (
+          <Alert variant="danger">{errorCountPrice}</Alert>
+        ) : (
+          // --- STRUKTUR TABEL ---
+          <Table responsive>
+            <thead>
+              <tr className="table-light">
+                <th>Produk</th>
+                <th className="text-center">Diskon (Rp)</th>
+                <th className="text-end">Harga Akhir</th>
+              </tr>
+            </thead>
+            <tbody>
+              {resultCountPrice.map((item, idx) => {
+                const currentDiscount = discounts[idx] || 0;
+                const priceAfterDiscount = item.totalPrice - currentDiscount;
+                
+                return (
+                  <tr key={idx} className="align-middle">
+                    {/* Kolom Nama Produk */}
+                    <td>
+                      <strong>{item.comodity}</strong>
+                      <div className="text-muted small">{item.totalWeight} gr</div>
+                    </td>
+
+                    {/* Kolom Kontrol Diskon */}
+                    <td className="text-center">
+                      <InputGroup style={{ minWidth: '150px', margin: 'auto' }}>
+                        <Button 
+                          variant="outline-danger" 
+                          onClick={() => handleDiscountChange(idx, 'decrease')}
+                          disabled={currentDiscount === 0}
+                        >
+                          -
+                        </Button>
+                        <Form.Control
+                          className="text-center fw-bold"
+                          value={currentDiscount.toLocaleString('id-ID')}
+                          readOnly
+                          aria-label="Discount amount"
+                        />
+                        <Button 
+                          variant="outline-success" 
+                          onClick={() => handleDiscountChange(idx, 'increase', item.totalPrice)}
+                          disabled={currentDiscount >= item.totalPrice}
+                        >
+                          +
+                        </Button>
+                      </InputGroup>
+                    </td>
+
+                    {/* Kolom Harga Akhir */}
+                    <td className="text-end">
+                      <span className="fw-bold fs-6">
+                        Rp {priceAfterDiscount.toLocaleString('id-ID')}
                       </span>
-                    </div>
+                      {currentDiscount > 0 && (
+                        <div className="text-muted small text-decoration-line-through">
+                          Rp {item.totalPrice.toLocaleString('id-ID')}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </Table>
+        )}
 
-                    {/* Breakdown detail */}
-                    {item.breakdown && item.breakdown.length > 0 && (
-                      <ul className="mt-2 ms-3 text-muted small">
-                        {item.breakdown.map((b, i) => (
-                          <li key={i}>
-                            {b.qty} × {b.berat} gr @ Rp {b.harga.toLocaleString()} = Rp{" "}
-                            {b.subtotal.toLocaleString()}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </li>
-                ))}
-              </>
-            )}
+        <hr />
 
-            <li className="list-group-item d-flex justify-content-between align-items-center fw-bolder mt-2">
-              <span>TOTAL</span>
-              <span className="text-primary">
-                Rp {resultCountPrice.reduce((sum, item) => sum + item.totalPrice, 0).toLocaleString()}
-              </span>
-            </li>
-          </ul>
-        </Modal.Body>
+        {/* --- BAGIAN TOTAL DAN PEMBAYARAN (TETAP SAMA) --- */}
+        <ListGroup variant="flush">
+          <ListGroup.Item className="d-flex justify-content-between align-items-center ps-0 pe-0">
+            <span>Subtotal</span>
+            <span>Rp {subtotal.toLocaleString()}</span>
+          </ListGroup.Item>
+          <ListGroup.Item className="d-flex justify-content-between align-items-center ps-0 pe-0">
+            <span>Total Diskon</span>
+            <span className="text-danger">- Rp {totalDiscount.toLocaleString()}</span>
+          </ListGroup.Item>
+          <ListGroup.Item className="d-flex justify-content-between align-items-center ps-0 pe-0 fw-bolder fs-5">
+            <span>TOTAL AKHIR</span>
+            <span className="text-primary">Rp {grandTotal.toLocaleString()}</span>
+          </ListGroup.Item>
+        </ListGroup>
 
-        <Modal.Footer>
-          <Button variant="secondary" onClick={handleCloseModal}>
-            Tutup
-          </Button>
-          <Button variant="primary" onClick={handleCloseModal}>
-            Konfirmasi & Cetak Struk
-          </Button>
-        </Modal.Footer>
-      </Modal>
+        <Form.Group className="my-3">
+          <Form.Label className="fw-bold">Nominal Bayar</Form.Label>
+          <InputGroup>
+            <InputGroup.Text>Rp</InputGroup.Text>
+            <Form.Control
+              type="text"
+              value={paymentAmount ? parseInt(paymentAmount, 10).toLocaleString('id-ID') : ""}
+              onChange={handlePaymentChange}
+              placeholder="Masukkan jumlah uang pembayaran"
+              size="lg"
+              autoFocus
+            />
+          </InputGroup>
+        </Form.Group>
 
+        {paymentAmount && change >= 0 && (
+          <div className="alert alert-success d-flex justify-content-between align-items-center fw-bolder fs-5">
+            <span>Kembalian</span>
+            <span>Rp {change.toLocaleString()}</span>
+          </div>
+        )}
+      </Modal.Body>
+
+      <Modal.Footer>
+        <Button variant="secondary" onClick={handleCloseModal}>Tutup</Button>
+        <Button variant="primary" onClick={handleCloseModal} disabled={change < 0 || !paymentAmount}>
+          Konfirmasi & Cetak Struk
+        </Button>
+      </Modal.Footer>
+    </Modal>
 
       <Modal show={showModalCstmW} onHide={handleCloseModalCstmW} centered size='lg'>
         <Modal.Header closeButton>
@@ -554,18 +636,16 @@ function Dashboard() {
               </Button>
             </InputGroup>
 
-            {/* Slider untuk penyesuaian cepat (0-20kg) */}
+
             <Form.Range
               min={0}
-              max={20} // Batas slider tetap 20 untuk kemudahan penggunaan
+              max={20}
               step={1}
-              // Nilai slider akan mentok di 20, meskipun nilai state kgValue bisa lebih
               value={Math.min(kgValue, 20)}
               onChange={(e) => setKgValue(parseInt(e.target.value, 10))}
             />
           </Form.Group>
 
-          {/* Range per Gram (Tidak berubah) */}
           <Form.Group>
             <Form.Label>
               Berat (Gram): {gramValue} g{" "}
@@ -580,7 +660,6 @@ function Dashboard() {
             />
           </Form.Group>
 
-          {/* Total (Tidak berubah) */}
           <div className="mt-4 p-3 border rounded bg-light">
             <strong>Total:</strong> {totalWeight / 1000} kg ({totalWeight} g) <br />
             <strong>Harga:</strong> Rp {totalPrice.toLocaleString()}
