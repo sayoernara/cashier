@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { Container, Row, Col, Carousel, Card } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { TbEye, TbEyeClosed } from "react-icons/tb";
-import { login } from './apis/api';
+import { getStorageData, login } from './apis/api';
 import { FaCashRegister } from 'react-icons/fa';
+import { socket } from '../App';
 
 function Login() {
   const [username, setUsername] = useState('');
@@ -40,6 +41,23 @@ function Login() {
     try {
       const response = await login(username, password);
       if (response.status === 200) {
+        if (!socket.connected) {
+          socket.connect();
+          socket.emit(
+            "registerSession",
+            {
+              username: getStorageData("uname"),
+              ipAddress: window.localStorage.getItem("ipAddress") || "unknown",
+            },
+            (response) => {
+              if (response.success) {
+                console.log(response.message);
+              } else {
+                console.error("Registrasi gagal:", response.message);
+              }
+            }
+          );
+        }
         navigate('/dashboard');
         return;
       }
@@ -61,7 +79,7 @@ function Login() {
         style={{
           maxWidth: '900px',
           width: '100%',
-          height: '500px', // 🔹 tinggi tetap
+          height: '500px',
           overflow: 'hidden',
           borderRadius: '15px',
           boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
@@ -104,7 +122,7 @@ function Login() {
             <div style={{ maxWidth: '350px', width: '100%' }}>
               <div className="text-center mb-4">
                 <FaCashRegister size={60} color="#007bff" />
-                <h3 style={{color:'#3498db'}}>Sayoernara | Cashier App</h3>
+                <h3 style={{ color: '#3498db' }}>Sayoernara | Cashier App</h3>
               </div>
               {error && (
                 <div className="alert alert-danger">{error}</div>

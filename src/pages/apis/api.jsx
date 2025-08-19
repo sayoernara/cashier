@@ -1,6 +1,7 @@
 import axios from "axios";
 import CryptoJS from 'crypto-js';
 import Cookies from 'js-cookie';
+import Swal from "sweetalert2";
 
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
@@ -23,6 +24,9 @@ export const checkSession = async() => {
 export const logout = async() =>{
     try{
         const response = await axios.get(`${API_BASE_URL}logout`, { withCredentials: true });
+        Cookies.remove('uname');
+        Cookies.remove('divAcc');
+        Cookies.remove('rname');
     } catch (error) {
         return error.response || { status: 500, data: { message: error.message || 'Terjadi kesalahan' } };
     }
@@ -50,6 +54,7 @@ export const login = async(username, password) => {
         Cookies.set('uname', uname);
         Cookies.set('divAcc', divAcc);
         Cookies.set('rname', rname);
+
         return response;
     } catch (error) {
         return error.response || { status: 500, data: { message: error.message || 'Terjadi kesalahan' } };
@@ -92,6 +97,28 @@ export const getStorageData = () => {
          };
     }
 }
+
+
+let sessionInterval = null;
+export const startSessionChecker = (onExpire) => {
+  if (sessionInterval) {
+    clearInterval(sessionInterval);   }
+
+  sessionInterval = setInterval(async () => {
+    const status = await checkSession();
+
+    if (status !== 200) {
+      console.warn("Session expired or invalid");
+
+      if (typeof onExpire === "function") {
+        onExpire();
+      }
+
+      clearInterval(sessionInterval);
+      sessionInterval = null;
+    }
+  }, 10000);
+};
 
 export const getGoodsList = async() => {
     try{
