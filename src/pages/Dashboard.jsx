@@ -21,6 +21,8 @@ function Dashboard() {
   const [kgValue, setKgValue] = useState(0);
   const [gramValue, setGramValue] = useState(0);
   const [resultCountPrice, setResultCounPrice] = useState([]);
+  const [loadingCountPrice, setLoadingCountPrice] = useState(false);
+  const [errorCountPrice, setErrorCountPrice] = useState(null);
 
   const handleCloseModal = () => {
     setShowModal(false)
@@ -75,8 +77,9 @@ function Dashboard() {
 
   const fetchCountPrice = useCallback(async () => {
     try {
+      setLoadingCountPrice(true);
       const carts = JSON.parse(localStorage.getItem("carts") || "{}")[currentCustomer] || [];
-      if(carts.length === 0) {
+      if (carts.length === 0) {
         Swal.fire({
           icon: 'warning',
           title: 'Keranjang Kosong',
@@ -88,9 +91,9 @@ function Dashboard() {
       setResultCounPrice(result.data.cart);
       console.log('fetch counter price : ', result.data.cart);
     } catch (err) {
-      setErrorLoadingGoods(err.message);
+      setErrorCountPrice(err.message);
     } finally {
-      setLoadingGoods(false);
+      setLoadingCountPrice(false);
     }
   }, []);
 
@@ -447,62 +450,79 @@ function Dashboard() {
       </Row>
 
       <Modal show={showModal} onHide={handleCloseModal} centered>
-  <Modal.Header closeButton>
-    <Modal.Title>Konfirmasi Transaksi</Modal.Title>
-  </Modal.Header>
-  <Modal.Body>
-    <p>
-      Berikut adalah rincian belanja untuk <strong>Customer #{currentCustomer + 1}</strong>:
-    </p>
+        <Modal.Header closeButton>
+          <Modal.Title>Konfirmasi Transaksi</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p>
+            Berikut adalah rincian belanja untuk <strong>Customer #{currentCustomer + 1}</strong>:
+          </p>
 
-    <ul className="list-group list-group-flush">
-      {resultCountPrice.map((item, idx) => (
-        <li
-          key={idx}
-          className="list-group-item d-flex flex-column"
-        >
-          <div className="d-flex justify-content-between align-items-center">
-            <div>
-              <strong>{item.comodity}</strong>
-              <div className="text-muted small">{item.totalWeight} gr</div>
-            </div>
-            <span className="fw-bold">
-              Rp {item.totalPrice.toLocaleString()}
-            </span>
-          </div>
+          <ul className="list-group list-group-flush">
+            {loadingCountPrice ? (
+              <div
+                className="d-flex justify-content-center align-items-center"
+                style={{ height: "85vh" }}
+              >
+                <Spinner
+                  animation="border"
+                  variant="primary"
+                  role="status"
+                  style={{ width: "4rem", height: "4rem" }}
+                />
+              </div>
+            ) : (
+              <>
+                {errorCountPrice && <Alert variant="danger">{errorCountPrice}</Alert>}
+                {resultCountPrice.map((item, idx) => (
+                  <li
+                    key={idx}
+                    className="list-group-item d-flex flex-column"
+                  >
+                    <div className="d-flex justify-content-between align-items-center">
+                      <div>
+                        <strong>{item.comodity}</strong>
+                        <div className="text-muted small">{item.totalWeight} gr</div>
+                      </div>
+                      <span className="fw-bold">
+                        Rp {item.totalPrice.toLocaleString()}
+                      </span>
+                    </div>
 
-          {/* Breakdown detail */}
-          {item.breakdown && item.breakdown.length > 0 && (
-            <ul className="mt-2 ms-3 text-muted small">
-              {item.breakdown.map((b, i) => (
-                <li key={i}>
-                  {b.qty} × {b.berat} gr @ Rp {b.harga.toLocaleString()} = Rp{" "}
-                  {b.subtotal.toLocaleString()}
-                </li>
-              ))}
-            </ul>
-          )}
-        </li>
-      ))}
+                    {/* Breakdown detail */}
+                    {item.breakdown && item.breakdown.length > 0 && (
+                      <ul className="mt-2 ms-3 text-muted small">
+                        {item.breakdown.map((b, i) => (
+                          <li key={i}>
+                            {b.qty} × {b.berat} gr @ Rp {b.harga.toLocaleString()} = Rp{" "}
+                            {b.subtotal.toLocaleString()}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                ))}
+              </>
+            )}
 
-      <li className="list-group-item d-flex justify-content-between align-items-center fw-bolder mt-2">
-        <span>TOTAL</span>
-        <span className="text-primary">
-          Rp {resultCountPrice.reduce((sum, item) => sum + item.totalPrice, 0).toLocaleString()}
-        </span>
-      </li>
-    </ul>
-  </Modal.Body>
+            <li className="list-group-item d-flex justify-content-between align-items-center fw-bolder mt-2">
+              <span>TOTAL</span>
+              <span className="text-primary">
+                Rp {resultCountPrice.reduce((sum, item) => sum + item.totalPrice, 0).toLocaleString()}
+              </span>
+            </li>
+          </ul>
+        </Modal.Body>
 
-  <Modal.Footer>
-    <Button variant="secondary" onClick={handleCloseModal}>
-      Tutup
-    </Button>
-    <Button variant="primary" onClick={handleCloseModal}>
-      Konfirmasi & Cetak Struk
-    </Button>
-  </Modal.Footer>
-</Modal>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleCloseModal}>
+            Tutup
+          </Button>
+          <Button variant="primary" onClick={handleCloseModal}>
+            Konfirmasi & Cetak Struk
+          </Button>
+        </Modal.Footer>
+      </Modal>
 
 
       <Modal show={showModalCstmW} onHide={handleCloseModalCstmW} centered size='lg'>
