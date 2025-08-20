@@ -28,8 +28,10 @@ function Dashboard() {
   const DISCOUNT_STEP = 500;
 
   const handleCloseModal = () => {
-    setShowModal(false)
+    setShowModal(false);
     setResultCounPrice([]);
+    setDiscounts([]); 
+    setPaymentAmount(""); 
   };
   const handleShowModal = () => {
     if (cart.length > 0) {
@@ -79,26 +81,25 @@ function Dashboard() {
   });
 
   const fetchCountPrice = useCallback(async () => {
-    try {
-      setLoadingCountPrice(true);
-      const carts = JSON.parse(localStorage.getItem("carts") || "{}")[currentCustomer] || [];
-      if (carts.length === 0) {
-        Swal.fire({
-          icon: 'warning',
-          title: 'Keranjang Kosong',
-          text: 'Silakan tambahkan barang ke keranjang terlebih dahulu.',
-        });
-        return;
-      }
-      const result = await countPrice(carts);
-      setResultCounPrice(result.data.cart);
-      // console.log('fetch counter price : ', result.data.cart);
-    } catch (err) {
-      setErrorCountPrice(err.message);
-    } finally {
-      setLoadingCountPrice(false);
+  try {
+    setLoadingCountPrice(true);
+    const carts = JSON.parse(localStorage.getItem("carts") || "{}")[currentCustomer] || [];
+    if (carts.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Keranjang Kosong',
+        text: 'Silakan tambahkan barang ke keranjang terlebih dahulu.',
+      });
+      return;
     }
-  }, []);
+    const result = await countPrice(carts);
+    setResultCounPrice(result.data.cart);
+  } catch (err) {
+    setErrorCountPrice(err.message);
+  } finally {
+    setLoadingCountPrice(false);
+  }
+}, [currentCustomer]);
 
   useEffect(() => {
     fetchGoods();
