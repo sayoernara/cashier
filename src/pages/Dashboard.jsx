@@ -641,6 +641,7 @@ function Dashboard() {
                 onChange={handleKgInputChange}
                 placeholder="Masukkan berat (kg)"
                 className="text-center"
+                readOnly
               />
               <Button variant="outline-secondary" onClick={handleIncrementKg}>
                 +
@@ -653,6 +654,7 @@ function Dashboard() {
               max={20}
               step={1}
               value={Math.min(kgValue, 20)}
+              readOnly
               onChange={(e) => setKgValue(parseInt(e.target.value, 10))}
             />
           </Form.Group>
