@@ -309,10 +309,7 @@ function Dashboard() {
                     <Col key={idx} xs={12} sm={6} md={4} lg={6}>
                       <Card className="h-100 shadow-sm border-0">
                         <Card.Body>
-                          <Card.Title className="fs-6 fw-bold">
-                            {comodity}
-                          </Card.Title>
-                          {representativeItem.img ? (
+                         {representativeItem.img ? (
                             <img
                               src={representativeItem.img}
                               alt={comodity}
@@ -328,12 +325,15 @@ function Dashboard() {
                               }}
                             />
                           )}
+                          <Card.Title className="fs-6 fw-bold text-center">
+                            {comodity}
+                          </Card.Title>
 
                           <div className="d-flex flex-wrap gap-2 mt-3">
                             {groupedGoods[comodity].map((sub, i) => (
                               <Card
                                 key={i}
-                                className="p-2 text-center flex-fill border shadow-sm"
+                                className="text-center flex-fill border shadow-sm" 
                                 style={{
                                   minWidth: "80px",
                                   flex: "0 0 auto",
@@ -348,12 +348,22 @@ function Dashboard() {
                                   )
                                 }
                               >
-                                <div className="fw-bold">{sub.weight_Gr} gr</div>
-                                <div className="text-primary small">
+                                <div
+                                  className="fw-bold"
+                                  style={{
+                                    backgroundColor: "#2c3e50",
+                                    color: "white",
+                                    padding: "2px 8px",
+                                  }}
+                                >
+                                  {sub.weight_Gr} gr
+                                </div>
+                                <div className="text-primary small mt-1"> 
                                   Rp {parseInt(sub.price_per_Gr).toLocaleString()}
                                 </div>
                               </Card>
                             ))}
+
                             {representativeItem && (
                               <Card
                                 className="p-2 d-flex align-items-center justify-content-center border shadow-sm text-center"
