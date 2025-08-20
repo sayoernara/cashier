@@ -315,6 +315,7 @@ function Dashboard() {
                               src={representativeItem.img}
                               alt={comodity}
                               className="img-fluid itemimgcenter"
+                              onClick={() => handleShowModalCstmW(representativeItem.id_item, comodity)}
                             />
                           ) : (
                             <CiImageOff size={150} className="text-secondary"
@@ -324,6 +325,7 @@ function Dashboard() {
                                 width: '45%',
                                 height: 'auto'
                               }}
+                              onClick={() => handleShowModalCstmW(representativeItem.id_item, comodity)}
                             />
                           )}
                           <Card.Title className="fs-6 fw-bold text-center">
