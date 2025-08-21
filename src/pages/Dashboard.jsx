@@ -26,6 +26,8 @@ function Dashboard() {
   const [discounts, setDiscounts] = useState([]);
   const [paymentAmount, setPaymentAmount] = useState("");
   const DISCOUNT_STEP = 500;
+  const [loadingSaveTransaction, setLoadingSaveTransaction] = useState(false);
+  const [errorSaveTransaction, setErrorSaveTransaction] = useState(null);
 
   const handleCloseModal = () => {
     setShowModal(false);
@@ -33,6 +35,7 @@ function Dashboard() {
     setDiscounts([]); 
     setPaymentAmount(""); 
   };
+
   const handleShowModal = () => {
     if (cart.length > 0) {
       setShowModal(true);
@@ -93,6 +96,7 @@ function Dashboard() {
       return;
     }
     const result = await countPrice(carts);
+    console.log(result.data.cart);
     setResultCounPrice(result.data.cart);
   } catch (err) {
     setErrorCountPrice(err.message);
@@ -100,6 +104,33 @@ function Dashboard() {
     setLoadingCountPrice(false);
   }
 }, [currentCustomer]);
+
+const fetchTransaction = async () => {
+  setLoadingSaveTransaction(true);
+  const transactionPayload = {
+    customerIndex: currentCustomer,
+    items: resultCountPrice.map((item, index) => ({
+      comodity: item.comodity,
+      breakdown: item.breakdown,
+      id_item: item.id_item,
+      totalWeight: item.totalWeight,
+      originalPrice: item.totalPrice,
+      discount: discounts[index] || 0,
+      finalPrice: item.totalPrice - (discounts[index] || 0),
+    })),
+    summary: {
+      subtotal: subtotal,
+      totalDiscount: totalDiscount,
+      grandTotal: grandTotal,
+      paymentAmount: parseInt(paymentAmount, 10),
+      change: change,
+    },
+    transactionDate: new Date().toISOString(),
+  };
+  console.log(transactionPayload);
+  handleCloseModal();
+  setLoadingSaveTransaction(false);
+}
 
   useEffect(() => {
     fetchGoods();
@@ -467,7 +498,7 @@ function Dashboard() {
                           .reduce((sum, item) => sum + item.totalPrice, 0)
                           .toLocaleString()}
                       </span> */}
-                      <Button variant="success" size="xl" onClick={handleShowModal}>
+                      <Button variant="success" size="xl" disabled={loadingGoods} onClick={handleShowModal}>
                         Selesaikan pesanan
                       </Button>
                     </li>
@@ -614,8 +645,19 @@ function Dashboard() {
 
       <Modal.Footer>
         <Button variant="secondary" onClick={handleCloseModal}>Tutup</Button>
-        <Button variant="primary" onClick={handleCloseModal} disabled={change < 0 || !paymentAmount}>
-          Konfirmasi & Cetak Struk
+        <Button 
+          variant="primary" 
+          onClick={fetchTransaction}
+          disabled={change < 0 || !paymentAmount || loadingSaveTransaction}
+        >
+          {loadingSaveTransaction ? (
+            <>
+              <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
+              {' '}Menyimpan...
+            </>
+          ) : (
+            'Konfirmasi & Cetak Struk'
+          )}
         </Button>
       </Modal.Footer>
     </Modal>
