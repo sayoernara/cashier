@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useEffect } from 'react';
-import { countPrice, getGoodsList, getGoodsPricePerGram } from './apis/api';
+import { countPrice, getGoodsList, getGoodsPricePerGram, getStorageData, saveSellTransaction } from './apis/api';
 import { Alert, Col, Row, Spinner, Card, Button, Modal, Form, InputGroup, ListGroup, Table } from 'react-bootstrap';
 import { BiCart } from 'react-icons/bi';
 import { CiImageOff } from 'react-icons/ci';
@@ -125,11 +125,20 @@ const fetchTransaction = async () => {
       paymentAmount: parseInt(paymentAmount, 10),
       change: change,
     },
+    location : getStorageData().decryptidloc,
+    cashier : getStorageData().decryptuname,
     transactionDate: new Date().toISOString(),
   };
   console.log(transactionPayload);
-  handleCloseModal();
-  setLoadingSaveTransaction(false);
+  try {
+    const response = await saveSellTransaction(transactionPayload);
+    console.log(response);
+  } catch (error) {
+    setErrorSaveTransaction(error.message);
+  } finally{
+    handleCloseModal();
+    setLoadingSaveTransaction(false);
+  }
 }
 
   useEffect(() => {
@@ -390,7 +399,7 @@ const fetchTransaction = async () => {
                                     padding: "2px 8px",
                                   }}
                                 >
-                                  {sub.weight_Gr} gr
+                                  {sub.weight_txt} 
                                 </div>
                                 <div className="text-primary small mt-1"> 
                                   Rp {parseInt(sub.price_per_Gr).toLocaleString()}

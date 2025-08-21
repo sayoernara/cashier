@@ -168,3 +168,12 @@ export const countPrice = async(barang) => {
         return error.response || { status: 500, data: { message: error.message || 'Terjadi kesalahan' } };
     }
 }
+
+export const saveSellTransaction = async(transaction) => {
+    try{
+        const response = await axios.post(`${API_BASE_URL}cashier/savetransaction`, { transaction: transaction }, { withCredentials: true });
+        return response
+    } catch (error) {
+        return error.response || { status: 500, data: { message: error.message || 'Terjadi kesalahan' } };
+    }
+}
