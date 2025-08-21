@@ -397,23 +397,6 @@ const fetchTransaction = async () => {
                                 </div>
                               </Card>
                             ))}
-
-                            {representativeItem && (
-                              <Card
-                                className="p-2 d-flex align-items-center justify-content-center border shadow-sm text-center"
-                                style={{
-                                  minWidth: "80px",
-                                  minHeight: "80px",
-                                  flex: "0 0 auto",
-                                  cursor: "pointer",
-                                  backgroundColor: '#3498db',
-                                  color: 'white',
-                                }}
-                                onClick={() => handleShowModalCstmW(representativeItem.id_item, comodity)}
-                              >
-                                CSTM<br /> Weight
-                              </Card>
-                            )}
                           </div>
                         </Card.Body>
                       </Card>
