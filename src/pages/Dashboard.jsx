@@ -666,25 +666,6 @@ const fetchTransaction = async () => {
               {priceKg > 0 && <span className="text-success">Rp {priceKg.toLocaleString()}</span>}
             </Form.Label>
 
-            {/* Kombinasi Tombol dan Input Field */}
-            <InputGroup className="mb-2">
-              <Button variant="outline-secondary" onClick={handleDecrementKg}>
-                -
-              </Button>
-              <Form.Control
-                type="number"
-                value={kgValue}
-                onChange={handleKgInputChange}
-                placeholder="Masukkan berat (kg)"
-                className="text-center"
-                readOnly
-              />
-              <Button variant="outline-secondary" onClick={handleIncrementKg}>
-                +
-              </Button>
-            </InputGroup>
-
-
             <Form.Range
               min={0}
               max={20}
