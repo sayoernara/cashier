@@ -10,6 +10,7 @@ function MainLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const rname = getStorageData().decryptrname;
+  const loc = getStorageData().decryptloc;
   const channel = new BroadcastChannel("auth_channel");
   const navigate = useNavigate();
 
@@ -54,6 +55,8 @@ function MainLayout() {
       Cookies.remove('uname');
       Cookies.remove('divAcc');
       Cookies.remove('rname');
+      Cookies.remove('idloc');
+      Cookies.remove('loc');
       navigate('/', { replace: true });
     }
   };
@@ -78,7 +81,7 @@ function MainLayout() {
             className="navbar-brand fw-bold text-primary"
             style={{ letterSpacing: '1px' }}
           >
-            Sayoernara | {rname}
+            Sayoernara | {rname} ({loc})
           </NavLink>
 
           {/* Tengah - Menu */}

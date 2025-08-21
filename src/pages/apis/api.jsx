@@ -27,6 +27,8 @@ export const logout = async() =>{
         Cookies.remove('uname');
         Cookies.remove('divAcc');
         Cookies.remove('rname');
+        Cookies.remove('idloc');
+        Cookies.remove('loc');
     } catch (error) {
         return error.response || { status: 500, data: { message: error.message || 'Terjadi kesalahan' } };
     }
@@ -46,14 +48,20 @@ export const login = async(username, password) => {
         const datalog = response.data.authData.info
         const name = datalog.nama;
         const role = datalog.role;
+        const id_loc = datalog.id_loc;
+        const location = datalog.location;
 
         const uname = CryptoJS.AES.encrypt(username, ENCRYPTION_KEY).toString();
         const rname = CryptoJS.AES.encrypt(name, ENCRYPTION_KEY).toString();
         const divAcc = CryptoJS.AES.encrypt(role, ENCRYPTION_KEY).toString();
+        const idloc = CryptoJS.AES.encrypt(id_loc, ENCRYPTION_KEY).toString();
+        const loc = CryptoJS.AES.encrypt(location, ENCRYPTION_KEY).toString();
 
         Cookies.set('uname', uname);
         Cookies.set('divAcc', divAcc);
         Cookies.set('rname', rname);
+        Cookies.set('idloc', idloc);
+        Cookies.set('loc', loc);
 
         return response;
     } catch (error) {
@@ -65,12 +73,16 @@ export const getStorageData = () => {
     const Encrypteduname = Cookies.get('uname');
     const EncrypteddivAcc = Cookies.get('divAcc');
     const Encryptedrname = Cookies.get('rname');
+    const Encryptedidloc = Cookies.get('idloc');
+    const Encryptedloc = Cookies.get('loc');
 
-    if(!Encrypteduname || !EncrypteddivAcc || !Encryptedrname){
+    if(!Encrypteduname || !EncrypteddivAcc || !Encryptedrname || !Encryptedidloc || !Encryptedloc){
         return {
             decryptuname: null,
             decryptdivAcc: null,
-            decryptrname: null
+            decryptrname: null,
+            decryptidloc: null,
+            decryptloc: null
         }
     }
 
@@ -84,16 +96,26 @@ export const getStorageData = () => {
         const readAcc = CryptoJS.AES.decrypt(Encryptedrname, ENCRYPTION_KEY);
         const decryptrname = readAcc.toString(CryptoJS.enc.Utf8) || null;
 
+        const readIdLoc = CryptoJS.AES.decrypt(Encryptedidloc, ENCRYPTION_KEY);
+        const decryptidloc = readIdLoc.toString(CryptoJS.enc.Utf8) || null;
+
+        const readLoc = CryptoJS.AES.decrypt(Encryptedloc, ENCRYPTION_KEY);
+        const decryptloc = readLoc.toString(CryptoJS.enc.Utf8) || null;
+
         return {
             decryptuname,
             decryptdivAcc,
-            decryptrname
+            decryptrname,
+            decryptidloc,
+            decryptloc
         }
     }catch (error) {
         return { 
             decryptuname: null,
             decryptdivAcc: null,
-            decryptrname: null
+            decryptrname: null,
+            decryptidloc: null,
+            decryptloc: null
          };
     }
 }
