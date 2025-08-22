@@ -456,10 +456,20 @@ const fetchTransaction = async () => {
           </div>
 
           <div className="d-flex gap-2 mt-3">
-            <Button variant="secondary" size="sm" onClick={handlePrevCustomer} disabled={currentCustomer === 0}>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handlePrevCustomer}
+              disabled={currentCustomer === 0}
+            >
               &laquo; Prev
             </Button>
-            <Button variant="primary" size="sm" onClick={handleNextCustomer}>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleNextCustomer}
+              disabled={currentCustomer === 1}
+            >
               Next Customer &raquo;
             </Button>
           </div>
