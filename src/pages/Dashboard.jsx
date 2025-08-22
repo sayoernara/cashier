@@ -16,7 +16,8 @@ function Dashboard() {
   const [showModalCstmW, setShowModalCstmW] = useState(false);
   const [selectedIdItem, setSelectedIdItem] = useState('');
   const [selectedItemNm, setSelectedItemNm] = useState('');
-  const [errorLoadingGoodsPrice, setErrorLoadingGoodsPrice] = useState(null);
+  const [errorGoodsPrice, setErrorGoodsPrice] = useState(null);
+  const [loadingGoodsPrice, setLoadingGoodsPrice] = useState(false);
   const [goodsPrice, setGoodsPrice] = useState([]);
   const [kgValue, setKgValue] = useState(0);
   const [gramValue, setGramValue] = useState(0);
@@ -60,14 +61,14 @@ function Dashboard() {
 
   const fetchGoodsPricePerGram = useCallback(async (selectedIdItem) => {
     try {
-      setErrorLoadingGoodsPrice(true);
+      setLoadingGoodsPrice(true);
       const result = await getGoodsPricePerGram(selectedIdItem);
       setGoodsPrice(result.data.price[0]);
       // console.log(result.data.price[0]);
     } catch (err) {
-      setErrorLoadingGoods(err.message);
+      setErrorGoodsPrice(err.message);
     } finally {
-      setErrorLoadingGoodsPrice(false);
+      setLoadingGoodsPrice(false);
     }
   });
 
@@ -84,7 +85,7 @@ function Dashboard() {
       return;
     }
     const result = await countPrice(carts);
-    console.log(result.data.cart);
+    // console.log(result.data.cart);
     setResultCounPrice(result.data.cart);
   } catch (err) {
     setErrorCountPrice(err.message);
@@ -117,10 +118,13 @@ const fetchTransaction = async () => {
     cashier : getStorageData().decryptuname,
     transactionDate: new Date().toISOString(),
   };
-  console.log(transactionPayload);
+  // console.log('payload', transactionPayload);
   try {
     const response = await saveSellTransaction(transactionPayload);
-    console.log(response);
+     cart.forEach((item) => {
+      removeFromCart(item.comodity);
+    });
+    // console.log('response', response);
   } catch (error) {
     setErrorSaveTransaction(error.message);
   } finally{
@@ -128,6 +132,7 @@ const fetchTransaction = async () => {
     setLoadingSaveTransaction(false);
   }
 }
+
   const filteredComodities = Object.keys(groupedGoods).filter((comodity) => {
     if (!selectedLetter) return true;
     return comodity.toUpperCase().startsWith(selectedLetter);
@@ -270,7 +275,7 @@ const fetchTransaction = async () => {
   } else if (operation === 'decrease') {
     newValue = Math.max(currentDiscount - DISCOUNT_STEP, 0);
   }
-  console.log(`Item index: ${index}, Operation: ${operation}, Old Discount: ${currentDiscount}, New Discount: ${newValue}`);
+  // console.log(`Item index: ${index}, Operation: ${operation}, Old Discount: ${currentDiscount}, New Discount: ${newValue}`);
   newDiscounts[index] = newValue;
   setDiscounts(newDiscounts);
 };
