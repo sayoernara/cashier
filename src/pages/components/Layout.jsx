@@ -1,38 +1,59 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import './LayoutStyle.css'
 import { IoMdLogOut } from 'react-icons/io';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import Cookies from 'js-cookie';
-import { getStorageData, logout } from '../apis/api';
+import { getGoodsList, getStorageData, logout } from '../apis/api';
+import { GoodsContext } from './GoodsContext';
+import { Card } from 'react-bootstrap';
 
 function MainLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const rname = getStorageData().decryptrname;
   const loc = getStorageData().decryptloc;
-  const channel = new BroadcastChannel("auth_channel");
   const navigate = useNavigate();
-
-  const toggleSidebar = () => {
-    setSidebarCollapsed(!sidebarCollapsed);
-  };
-
-  const toggleSettings = () => {
-    setSettingsOpen(!settingsOpen);
-  };
-
   const location = useLocation();
 
+  const [loadingGoods, setLoadingGoods] = useState(false);
+  const [errorLoadingGoods, setErrorLoadingGoods] = useState(null);
+  const [goodsList, setGoodsList] = useState([]);
+  const [selectedLetter, setSelectedLetter] = useState(null);
+
+  const fetchGoods = useCallback(async () => {
+    try {
+      setLoadingGoods(true);
+      const result = await getGoodsList();
+      setGoodsList(result.data.goods[0]);
+    } catch (err) {
+      setErrorLoadingGoods(err.message);
+    } finally {
+      setLoadingGoods(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchGoods();
+  }, [fetchGoods]);
+
+  const groupedGoods = goodsList.reduce((acc, item) => {
+    if (!acc[item.comodity]) {
+      acc[item.comodity] = [];
+    }
+    acc[item.comodity].push(item);
+    return acc;
+  }, {});
+
+  const alphabet = Array.from(
+    new Set(Object.keys(groupedGoods).map(c => c[0].toUpperCase()))
+  ).sort();
 
   React.useEffect(() => {
     if (location.pathname.startsWith('/settings')) {
       setSettingsOpen(true);
     }
   }, [location.pathname]);
-
-  const navLinkClass = ({ isActive }) =>
-    `list-group-item list-group-item-action py-2 ${isActive ? 'active' : ''}`;
 
   const handleLogoutClick = async () => {
     const result = await Swal.fire({
@@ -62,9 +83,13 @@ function MainLayout() {
   };
 
   return (
-    <div>
+    <GoodsContext.Provider
+      value={{ goodsList, groupedGoods, alphabet, selectedLetter, setSelectedLetter, loadingGoods, errorLoadingGoods }}
+    >
+    <div className="d-flex flex-column min-vh-100">
+      {/* Navbar atas */}
       <nav
-        className="navbar navbar-expand-lg shadow-sm"
+        className="navbar navbar-expand-lg shadow-sm flex items-center justify-between bg-blue-600 text-white px-4 py-2"
         style={{
           backgroundColor: 'white',
           padding: '0.75rem 1.5rem',
@@ -75,7 +100,7 @@ function MainLayout() {
         }}
       >
         <div className="container-fluid d-flex align-items-center">
-          {/* Kiri - Brand */}
+          {/* Brand */}
           <NavLink
             to="/dashboard"
             className="navbar-brand fw-bold text-primary"
@@ -84,35 +109,27 @@ function MainLayout() {
             Sayoernara | {rname} ({loc})
           </NavLink>
 
-          {/* Tengah - Menu */}
-          <div className="px-4 py-2 rounded d-flex gap-4 mx-auto">
-            <NavLink
-              to="/dashboard"
-              className={({ isActive }) =>
-                `nav-link ${isActive ? "fw-bold text-primary" : "text-dark"}`
-              }
-            >
-              Regular
-            </NavLink>
-            <NavLink
-              to="/retur"
-              className={({ isActive }) =>
-                `nav-link ${isActive ? "fw-bold text-primary" : "text-dark"}`
-              }
-            >
-              Retur
-            </NavLink>
-            <NavLink
-              to="/transaksi"
-              className={({ isActive }) =>
-                `nav-link ${isActive ? "fw-bold text-primary" : "text-dark"}`
-              }
-            >
-              Transaksi
-            </NavLink>
+          <div className="flex-1 flex justify-center space-x-2 d-flex flex-wrap gap-1 ">
+            {alphabet.map((letter) => (
+              <Card
+                key={letter}
+                className={`p-2 text-center shadow-sm border ${selectedLetter === letter ? "bg-primary text-white" : ""
+                  }`}
+                style={{
+                  width: "40px",
+                  height: "40hv",
+                  cursor: "pointer",
+                }}
+                onClick={() =>
+                  setSelectedLetter(selectedLetter === letter ? null : letter)
+                }
+              >
+                {letter}
+              </Card>
+            ))}
           </div>
 
-          {/* Kanan - Logout */}
+          {/* Logout */}
           <ul className="navbar-nav ms-auto align-items-lg-center mt-3 mt-lg-0">
             <li className="nav-item">
               <Link
@@ -127,23 +144,64 @@ function MainLayout() {
         </div>
       </nav>
 
-
-      {/* Layout container */}
-      <div className="d-flex">
-        {/* Main content */}
-        <main
-          className="flex-grow-1 p-0"
-          style={{
-            backgroundColor: '#f4f6f8',
-            minHeight: 'calc(100vh - 70px)',
-          }}
-        >
-          <Outlet />
-        </main>
+      {/* Konten utama */}
+            <main
+        className="flex-grow-1 p-0"
+        style={{
+          backgroundColor: '#f4f6f8',
+          minHeight: 'calc(100vh - 70px)',
+          paddingBottom: '70px' // tingginya kira-kira sama dengan footer
+        }}
+      >
+        <Outlet />
+      </main>
 
 
-      </div>
+      {/* Footer menu */}
+            {/* Footer menu - Fixed */}
+      <footer
+        className="shadow-sm"
+        style={{
+          backgroundColor: 'white',
+          borderTop: '1px solid #eaeaea',
+          padding: '0.75rem 1.5rem',
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          width: '100%',
+          zIndex: 1000
+        }}
+      >
+        <div className="d-flex justify-content-center gap-4">
+          <NavLink
+            to="/dashboard"
+            className={({ isActive }) =>
+              `nav-link ${isActive ? "fw-bold text-primary" : "text-dark"}`
+            }
+          >
+            Regular
+          </NavLink>
+          <NavLink
+            to="/retur"
+            className={({ isActive }) =>
+              `nav-link ${isActive ? "fw-bold text-primary" : "text-dark"}`
+            }
+          >
+            Retur
+          </NavLink>
+          <NavLink
+            to="/transaksi"
+            className={({ isActive }) =>
+              `nav-link ${isActive ? "fw-bold text-primary" : "text-dark"}`
+            }
+          >
+            Transaksi
+          </NavLink>
+        </div>
+      </footer>
+
     </div>
+    </GoodsContext.Provider>
   );
 }
 

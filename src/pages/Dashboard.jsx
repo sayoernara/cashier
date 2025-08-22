@@ -1,15 +1,15 @@
-import React, { useCallback, useState, useEffect } from 'react';
-import { countPrice, getGoodsList, getGoodsPricePerGram, getStorageData, saveSellTransaction } from './apis/api';
+import React, { useCallback, useState, useEffect, useContext } from 'react';
+import { countPrice, getGoodsPricePerGram, getStorageData, saveSellTransaction } from './apis/api';
 import { Alert, Col, Row, Spinner, Card, Button, Modal, Form, InputGroup, ListGroup, Table } from 'react-bootstrap';
 import { BiCart } from 'react-icons/bi';
 import { CiImageOff } from 'react-icons/ci';
 import Swal from 'sweetalert2';
+import { GoodsContext } from './components/GoodsContext'; 
 
 function Dashboard() {
-  const [loadingGoods, setLoadingGoods] = useState(false);
-  const [errorLoadingGoods, setErrorLoadingGoods] = useState(null);
-  const [goodsList, setGoodsList] = useState([]);
-  const [selectedLetter, setSelectedLetter] = useState(null);
+  const { groupedGoods, selectedLetter } = useContext(GoodsContext);
+  const { loadingGoods, goodsList, errorLoadingGoods } = useContext(GoodsContext);
+
   const [currentCustomer, setCurrentCustomer] = useState(0);
   const [cart, setCart] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -57,18 +57,6 @@ function Dashboard() {
     setShowModalCstmW(true);
     fetchGoodsPricePerGram(id);
   };
-
-  const fetchGoods = useCallback(async () => {
-    try {
-      setLoadingGoods(true);
-      const result = await getGoodsList();
-      setGoodsList(result.data.goods[0]);
-    } catch (err) {
-      setErrorLoadingGoods(err.message);
-    } finally {
-      setLoadingGoods(false);
-    }
-  }, []);
 
   const fetchGoodsPricePerGram = useCallback(async (selectedIdItem) => {
     try {
@@ -140,29 +128,11 @@ const fetchTransaction = async () => {
     setLoadingSaveTransaction(false);
   }
 }
-
-  useEffect(() => {
-    fetchGoods();
-  }, [fetchGoods]);
-
-  const groupedGoods = goodsList.reduce((acc, item) => {
-    if (!acc[item.comodity]) {
-      acc[item.comodity] = [];
-    }
-    acc[item.comodity].push(item);
-    return acc;
-  }, {});
-
   const filteredComodities = Object.keys(groupedGoods).filter((comodity) => {
     if (!selectedLetter) return true;
     return comodity.toUpperCase().startsWith(selectedLetter);
   });
 
-  const alphabet = Array.from(
-    new Set(
-      Object.keys(groupedGoods).map(c => c[0].toUpperCase())
-    )
-  ).sort();
 
   const getCart = (customerIndex) => {
     const carts = JSON.parse(localStorage.getItem("carts") || "{}");
@@ -418,26 +388,6 @@ const fetchTransaction = async () => {
         </Col>
 
         <Col md={3} style={{ flex: "0 0 30%" }}>
-          <div className="d-flex flex-wrap gap-1 mb-3">
-            {alphabet.map((letter) => (
-              <Card
-                key={letter}
-                className={`p-2 text-center shadow-sm border ${selectedLetter === letter ? "bg-primary text-white" : ""
-                  }`}
-                style={{
-                  width: "40px",
-                  height: "40hv",
-                  cursor: "pointer",
-                }}
-                onClick={() =>
-                  setSelectedLetter(selectedLetter === letter ? null : letter)
-                }
-              >
-                {letter}
-              </Card>
-            ))}
-          </div>
-
           <h4 className="mt-4"><BiCart /> Cart Customer #{currentCustomer + 1}</h4>
           <div style={{
             backgroundColor: '#f8f9fa',
