@@ -325,7 +325,7 @@ const fetchTransaction = async () => {
                     <Col key={idx} xs={12} sm={6} md={4} lg={6}>
                       <Card className="h-100 shadow-sm border-0">
                         <Card.Body>
-                         {representativeItem.img ? (
+                          {representativeItem.img ? (
                             <img
                               src={representativeItem.img}
                               alt={comodity}
@@ -348,39 +348,50 @@ const fetchTransaction = async () => {
                           </Card.Title>
 
                           <div className="d-flex flex-wrap gap-2 mt-3">
-                            {groupedGoods[comodity].map((sub, i) => (
-                              <Card
-                                key={i}
-                                className="text-center flex-fill border shadow-sm" 
-                                style={{
-                                  minWidth: "80px",
-                                  flex: "0 0 auto",
-                                  cursor: "pointer",
-                                }}
-                                onClick={() =>
-                                  addToCart(
-                                    comodity,
-                                    sub.id_item,
-                                    sub.weight_Gr,
-                                    sub.price_per_Gr
-                                  )
-                                }
-                              >
-                                <div
-                                  className="fw-bold"
+                            {groupedGoods[comodity].map((sub, i) => {
+                              const isHighlighted = sub.weight_txt === "Kg";
+                              const headerStyle = {
+                                backgroundColor: "#2c3e50",
+                                color: "white",
+                                padding: "5px 8px",
+                              };
+                              const bodyStyle = {
+                                backgroundColor: isHighlighted ? "#2ecc71" : "white",
+                                color: isHighlighted ? "white" : "#2c3e50",
+                                padding: "8px 0",
+                              };
+
+                              return (
+                                <Card
+                                  key={i}
+                                  className="text-center flex-fill border-0 shadow-sm overflow-hidden"
                                   style={{
-                                    backgroundColor: "#2c3e50",
-                                    color: "white",
-                                    padding: "2px 8px",
+                                    minWidth: "80px",
+                                    flex: "0 0 auto",
+                                    cursor: "pointer",
+                                    borderRadius: "8px",
                                   }}
+                                  onClick={() =>
+                                    addToCart(
+                                      comodity,
+                                      sub.id_item,
+                                      sub.weight_Gr,
+                                      sub.price_per_Gr
+                                    )
+                                  }
                                 >
-                                  {sub.weight_txt} 
-                                </div>
-                                <div className="text-primary small mt-1"> 
-                                  Rp {parseInt(sub.price_per_Gr).toLocaleString()}
-                                </div>
-                              </Card>
-                            ))}
+                                  <div className="fw-bold" style={headerStyle}>
+                                    {sub.weight_txt}
+                                  </div>
+                                  <div style={bodyStyle}>
+                                    <div className="fw-bolder h2 m-0 lh-1">{sub.stock}</div>
+                                    <div className="small fw-bold">
+                                        {parseInt(sub.price_per_Gr) / 1000}
+                                    </div>
+                                  </div>
+                                </Card>
+                              );
+                            })}
                           </div>
                         </Card.Body>
                       </Card>
