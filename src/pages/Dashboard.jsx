@@ -321,11 +321,11 @@ function Dashboard() {
         </Col>
       </Row>
 
-       {/* Modal Konfirmasi Transaksi (sekarang menggunakan state dari context) */}
-            <Modal show={showModal} onHide={handleCloseModal} centered size="lg">
-                <Modal.Header closeButton>
-                    <Modal.Title>Konfirmasi Transaksi</Modal.Title>
-                </Modal.Header>
+      {/* Modal Konfirmasi Transaksi (sekarang menggunakan state dari context) */}
+      <Modal show={showModal} onHide={handleCloseModal} centered size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title>Konfirmasi Transaksi</Modal.Title>
+        </Modal.Header>
         <Modal.Body>
           <p>
             Rincian belanja untuk <strong>Customer #{currentCustomer + 1}</strong>:
@@ -439,19 +439,19 @@ function Dashboard() {
         </Modal.Body>
 
         <Modal.Footer>
-                    <Button variant="secondary" onClick={handleCloseModal}>Tutup</Button>
-                    <Button
-                        variant="primary"
-                        onClick={handleConfirmTransaction} // Memanggil fungsi baru
-                        disabled={change < 0 || !paymentAmount || loadingSaveTransaction}
-                    >
-                        {loadingSaveTransaction ? (
-                            <> <Spinner as="span" animation="border" size="sm" /> Menyimpan... </>
-                        ) : (
-                            'Konfirmasi & Cetak Struk'
-                        )}
-                    </Button>
-                </Modal.Footer>
+          <Button variant="secondary" onClick={handleCloseModal}>Tutup</Button>
+          <Button
+            variant="primary"
+            onClick={handleConfirmTransaction}
+            disabled={change < 0 || !paymentAmount || loadingSaveTransaction}
+          >
+            {loadingSaveTransaction ? (
+              <> <Spinner as="span" animation="border" size="sm" /> Menyimpan... </>
+            ) : (
+              'Konfirmasi & Cetak Struk'
+            )}
+          </Button>
+        </Modal.Footer>
       </Modal>
 
       <Modal show={showModalCstmW} onHide={handleCloseModalCstmW} centered size='lg'>

@@ -10,6 +10,8 @@ import PrivateRoute from './PrivateRoute';
 import { io } from 'socket.io-client';
 import { getStorageData, logout, startSessionChecker } from './pages/apis/api';
 import Swal from 'sweetalert2';
+import Retur from './pages/Retur';
+import Transaction from './pages/Transaction';
 
 export const socket = io("https://nss.sayoernara.com", {
   withCredentials: false,
@@ -56,6 +58,8 @@ function App() {
 
         <Route element={<MainLayout />}>
           <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+          <Route path="/retur" element={<PrivateRoute><Retur /></PrivateRoute>} />
+          <Route path="/transaksi" element={<PrivateRoute><Transaction /></PrivateRoute>} />
         </Route>
         <Route path='*' element={<NotFound />}></Route>
         <Route path='/404' element={<NotFound />}></Route>
