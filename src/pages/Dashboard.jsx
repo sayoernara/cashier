@@ -300,11 +300,6 @@ function Dashboard() {
               </div>
             )}
           </div>
-           {cart.length > 0 && (
-              <Button className='mt-2' variant="success" size="lg" disabled={loadingGoods} onClick={handleShowModal}>
-                  Selesaikan Pesanan
-              </Button>
-           )}
           <div className="d-flex gap-2 mt-3">
             <Button
               variant="secondary"
