@@ -1,18 +1,24 @@
-import React, { useCallback, useState, useEffect, useContext } from 'react';
-import { countPrice, getGoodsPricePerGram, getStorageData, saveSellTransaction } from './apis/api';
+import React, { useCallback, useState, useContext } from 'react';
+import { getGoodsPricePerGram } from './apis/api';
 import { Alert, Col, Row, Spinner, Card, Button, Modal, Form, InputGroup, ListGroup, Table } from 'react-bootstrap';
 import { BiCart } from 'react-icons/bi';
 import { CiImageOff } from 'react-icons/ci';
-import Swal from 'sweetalert2';
 import { GoodsContext } from './components/GoodsContext';
 
 function Dashboard() {
-  const { groupedGoods, selectedLetter } = useContext(GoodsContext);
-  const { loadingGoods, errorLoadingGoods } = useContext(GoodsContext);
+  // Mengambil semua state dan fungsi dari Context
+  const {
+    groupedGoods, selectedLetter, loadingGoods, errorLoadingGoods,
+    currentCustomer, setCurrentCustomer,
+    cart, addToCart, removeFromCart,
+    showModal, handleCloseModal,
+    resultCountPrice, loadingCountPrice, errorCountPrice,
+    discounts, setDiscounts,
+    paymentAmount, setPaymentAmount,
+    fetchTransaction, loadingSaveTransaction
+  } = useContext(GoodsContext);
 
-  const [currentCustomer, setCurrentCustomer] = useState(0);
-  const [cart, setCart] = useState([]);
-  const [showModal, setShowModal] = useState(false);
+  // State lokal hanya untuk modal kustomisasi berat
   const [showModalCstmW, setShowModalCstmW] = useState(false);
   const [selectedIdItem, setSelectedIdItem] = useState('');
   const [selectedItemNm, setSelectedItemNm] = useState('');
@@ -21,29 +27,10 @@ function Dashboard() {
   const [goodsPrice, setGoodsPrice] = useState([]);
   const [kgValue, setKgValue] = useState(0);
   const [gramValue, setGramValue] = useState(0);
-  const [resultCountPrice, setResultCounPrice] = useState([]);
-  const [loadingCountPrice, setLoadingCountPrice] = useState(false);
-  const [errorCountPrice, setErrorCountPrice] = useState(null);
-  const [discounts, setDiscounts] = useState([]);
-  const [paymentAmount, setPaymentAmount] = useState("");
+
   const DISCOUNT_STEP = 500;
-  const [loadingSaveTransaction, setLoadingSaveTransaction] = useState(false);
-  const [errorSaveTransaction, setErrorSaveTransaction] = useState(null);
 
-  const handleCloseModal = () => {
-    setShowModal(false);
-    setResultCounPrice([]);
-    setDiscounts([]);
-    setPaymentAmount("");
-  };
-
-  const handleShowModal = () => {
-    if (cart.length > 0) {
-      setShowModal(true);
-      fetchCountPrice();
-    }
-  };
-
+  // ----- FUNGSI LOKAL UNTUK MODAL KUSTOMISASI BERAT -----
   const handleCloseModalCstmW = () => {
     setSelectedIdItem('');
     setSelectedItemNm('');
@@ -52,6 +39,7 @@ function Dashboard() {
     setKgValue(0);
     setGramValue(0);
   };
+
   const handleShowModalCstmW = (id, itemnm) => {
     setSelectedIdItem(id);
     setSelectedItemNm(itemnm);
@@ -70,140 +58,39 @@ function Dashboard() {
       setLoadingGoodsPrice(false);
     }
   }, []);
+  // ----- AKHIR FUNGSI LOKAL -----
 
-  const fetchCountPrice = useCallback(async () => {
-    try {
-      setLoadingCountPrice(true);
-      const carts = JSON.parse(localStorage.getItem("carts") || "{}")[currentCustomer] || [];
-      if (carts.length === 0) {
-        Swal.fire({
-          icon: 'warning',
-          title: 'Keranjang Kosong',
-          text: 'Silakan tambahkan barang ke keranjang terlebih dahulu.',
-        });
-        return;
-      }
-      const result = await countPrice(carts);
-      setResultCounPrice(result.data.cart);
-    } catch (err) {
-      setErrorCountPrice(err.message);
-    } finally {
-      setLoadingCountPrice(false);
-    }
-  }, [currentCustomer]);
-
-  const fetchTransaction = async () => {
-    setLoadingSaveTransaction(true);
-    const transactionPayload = {
-      customerIndex: currentCustomer,
-      items: resultCountPrice.map((item, index) => ({
-        comodity: item.comodity,
-        breakdown: item.breakdown,
-        id_item: item.id_item,
-        totalWeight: item.totalWeight,
-        originalPrice: item.totalPrice,
-        discount: discounts[index] || 0,
-        finalPrice: item.totalPrice - (discounts[index] || 0),
-      })),
-      summary: {
-        subtotal: subtotal,
-        totalDiscount: totalDiscount,
-        grandTotal: grandTotal,
-        paymentAmount: parseInt(paymentAmount, 10),
-        change: change,
-      },
-      location: getStorageData().decryptidloc,
-      cashier: getStorageData().decryptuname,
-      transactionDate: new Date().toISOString(),
-    };
-    try {
-      const response = await saveSellTransaction(transactionPayload);
-      cart.forEach((item) => {
-        removeFromCart(item.comodity);
-      });
-    } catch (error) {
-      setErrorSaveTransaction(error.message);
-    } finally {
-      handleCloseModal();
-      setLoadingSaveTransaction(false);
-    }
-  }
 
   const filteredComodities = Object.keys(groupedGoods).filter((comodity) => {
     if (!selectedLetter) return true;
     return comodity.toUpperCase().startsWith(selectedLetter);
   });
 
-
-  const getCart = (customerIndex) => {
-    const carts = JSON.parse(localStorage.getItem("carts") || "{}");
-    return carts[customerIndex] || [];
-  };
-
-  const saveCart = (customerIndex, cart) => {
-    const carts = JSON.parse(localStorage.getItem("carts") || "{}");
-    carts[customerIndex] = cart;
-    localStorage.setItem("carts", JSON.stringify(carts));
-  };
-
-  useEffect(() => {
-    setCart(getCart(currentCustomer));
-  }, [currentCustomer]);
-
-  const addToCart = (comodity, id_item, weight, price) => {
-    setCart((prevCart) => {
-      const numWeight = parseInt(weight, 10);
-      const numPrice = parseInt(price, 10);
-
-      const existingItemIndex = prevCart.findIndex(
-        (item) => item.comodity === comodity && item.id_item === id_item
-      );
-
-      let updatedCart;
-
-      if (existingItemIndex > -1) {
-        updatedCart = prevCart.map((item, index) => {
-          if (index === existingItemIndex) {
-            return {
-              ...item,
-              totalWeight: item.totalWeight + numWeight,
-              totalPrice: item.totalPrice + numPrice,
-            };
-          }
-          return item;
-        });
-      } else {
-        updatedCart = [
-          ...prevCart,
-          {
-            comodity,
-            id_item,
-            totalWeight: numWeight,
-            totalPrice: numPrice,
-          },
-        ];
-      }
-
-      saveCart(currentCustomer, updatedCart);
-      return updatedCart;
-    });
-  };
-
-  const removeFromCart = (comodityToRemove) => {
-    const updatedCart = cart.filter((item) => item.comodity !== comodityToRemove);
-    setCart(updatedCart);
-    saveCart(currentCustomer, updatedCart);
-  };
-
   const handleNextCustomer = () => {
     setCurrentCustomer((prev) => prev + 1);
   };
-
 
   const handlePrevCustomer = () => {
     if (currentCustomer > 0) {
       setCurrentCustomer((prev) => prev - 1);
     }
+  };
+
+  // Logika perhitungan harga untuk modal transaksi
+  const subtotal = resultCountPrice.reduce((sum, item) => sum + item.totalPrice, 0);
+  const totalDiscount = discounts.reduce((sum, discount) => sum + (discount || 0), 0);
+  const grandTotal = subtotal - totalDiscount;
+  const change = parseInt(paymentAmount || 0, 10) - grandTotal;
+
+  const handleConfirmTransaction = () => {
+    const summaryData = {
+      subtotal: subtotal,
+      totalDiscount: totalDiscount,
+      grandTotal: grandTotal,
+      paymentAmount: parseInt(paymentAmount, 10),
+      change: change,
+    };
+    fetchTransaction(summaryData);
   };
 
   const getPrice = (weight) => {
@@ -255,11 +142,6 @@ function Dashboard() {
     const value = e.target.value.replace(/[^0-9]/g, "");
     setPaymentAmount(value);
   };
-
-  const subtotal = resultCountPrice.reduce((sum, item) => sum + item.totalPrice, 0);
-  const totalDiscount = discounts.reduce((sum, discount) => sum + (discount || 0), 0);
-  const grandTotal = subtotal - totalDiscount;
-  const change = parseInt(paymentAmount || 0, 10) - grandTotal;
 
   const presetWeights = [
     { label: '50 gr', value: 50 },
@@ -333,7 +215,7 @@ function Dashboard() {
                             {comodity}
                           </Card.Title>
 
-                          <div className="d-flex flex-wrap gap-2 mt-3">
+                          <div className="d-flex flex-wrap gap-2 mt-2">
                             {groupedGoods[comodity].map((sub, i) => {
                               const isHighlighted = sub.weight_txt === "Kg";
                               const headerStyle = {
@@ -392,53 +274,28 @@ function Dashboard() {
         <Col md={3} style={{ flex: "0 0 30%" }}>
           <h4 className="mt-4"><BiCart /> Cart Customer #{currentCustomer + 1}</h4>
           <div style={{
-            backgroundColor: '#f8f9fa',
-            borderRadius: '5px',
-            height: "calc(100vh - 400px)",
-            display: "flex",
-            flexDirection: "column"
+            backgroundColor: '#f8f9fa', borderRadius: '5px',
+            height: "calc(100vh - 250px)", // Sesuaikan tinggi jika perlu
+            display: "flex", flexDirection: "column"
           }}>
             {cart.length === 0 ? (
               <p className="text-muted small fst-italic m-2">Belum ada item</p>
             ) : (
-              <>
-                <div className='cartitemlist' style={{ flex: 1, overflowY: "auto" }}>
-                  <ul className="list-group small shadow-sm rounded">
-                    {[...cart].reverse().map((item, idx) => (
-                      <li
-                        key={`${item.comodity}-${idx}`}
-                        className="list-group-item d-flex justify-content-between align-items-center"
-                      >
-                        <div>
-                          <strong>{item.comodity}</strong>
-                          <div className="text-muted">
-                            Total: {item.totalWeight} gr
-                          </div>
-                        </div>
-                        <div className="d-flex align-items-center gap-2">
-                          <Button
-                            variant="outline-danger"
-                            size="sm"
-                            onClick={() => removeFromCart(item.comodity)}
-                          >
-                            Hapus
-                          </Button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="mt-2">
-                  {cart.length > 0 && (
-                    <li className="list-group-item d-flex justify-content-between align-items-center fw-bold">
-                      <Button variant="success" size="xl" disabled={loadingGoods} onClick={handleShowModal}>
-                        Selesaikan pesanan
+              <div className='cartitemlist' style={{ flex: 1, overflowY: "auto" }}>
+                <ul className="list-group small shadow-sm rounded">
+                  {[...cart].reverse().map((item, idx) => (
+                    <li key={`${item.comodity}-${idx}`} className="list-group-item d-flex justify-content-between align-items-center">
+                      <div>
+                        <strong>{item.comodity}</strong>
+                        <div className="text-muted">Total: {item.totalWeight} gr</div>
+                      </div>
+                      <Button variant="outline-danger" size="sm" onClick={() => removeFromCart(item.comodity)}>
+                        Hapus
                       </Button>
                     </li>
-                  )}
-                </div>
-              </>
+                  ))}
+                </ul>
+              </div>
             )}
           </div>
 
@@ -464,10 +321,11 @@ function Dashboard() {
         </Col>
       </Row>
 
-      <Modal show={showModal} onHide={handleCloseModal} centered size="lg">
-        <Modal.Header closeButton>
-          <Modal.Title>Konfirmasi Transaksi</Modal.Title>
-        </Modal.Header>
+       {/* Modal Konfirmasi Transaksi (sekarang menggunakan state dari context) */}
+            <Modal show={showModal} onHide={handleCloseModal} centered size="lg">
+                <Modal.Header closeButton>
+                    <Modal.Title>Konfirmasi Transaksi</Modal.Title>
+                </Modal.Header>
         <Modal.Body>
           <p>
             Rincian belanja untuk <strong>Customer #{currentCustomer + 1}</strong>:
@@ -581,22 +439,19 @@ function Dashboard() {
         </Modal.Body>
 
         <Modal.Footer>
-          <Button variant="secondary" onClick={handleCloseModal}>Tutup</Button>
-          <Button
-            variant="primary"
-            onClick={fetchTransaction}
-            disabled={change < 0 || !paymentAmount || loadingSaveTransaction}
-          >
-            {loadingSaveTransaction ? (
-              <>
-                <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
-                {' '}Menyimpan...
-              </>
-            ) : (
-              'Konfirmasi & Cetak Struk'
-            )}
-          </Button>
-        </Modal.Footer>
+                    <Button variant="secondary" onClick={handleCloseModal}>Tutup</Button>
+                    <Button
+                        variant="primary"
+                        onClick={handleConfirmTransaction} // Memanggil fungsi baru
+                        disabled={change < 0 || !paymentAmount || loadingSaveTransaction}
+                    >
+                        {loadingSaveTransaction ? (
+                            <> <Spinner as="span" animation="border" size="sm" /> Menyimpan... </>
+                        ) : (
+                            'Konfirmasi & Cetak Struk'
+                        )}
+                    </Button>
+                </Modal.Footer>
       </Modal>
 
       <Modal show={showModalCstmW} onHide={handleCloseModalCstmW} centered size='lg'>
