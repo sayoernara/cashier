@@ -1,9 +1,11 @@
-import React, { useCallback, useState, useContext } from 'react';
+import React, { useCallback, useState, useContext, useMemo } from 'react';
 import { getGoodsPricePerGram } from './apis/api';
 import { Alert, Col, Row, Spinner, Card, Button, Modal, Form, InputGroup, ListGroup, Table } from 'react-bootstrap';
 import { BiCart } from 'react-icons/bi';
 import { CiImageOff } from 'react-icons/ci';
 import { GoodsContext } from './components/GoodsContext';
+import { FaShoppingBag, FaBalanceScale } from 'react-icons/fa';
+import './Dashboard.css'; // Memuat gaya dari file CSS eksternal
 
 function Dashboard() {
   // Mengambil semua state dan fungsi dari Context
@@ -11,7 +13,7 @@ function Dashboard() {
     groupedGoods, selectedLetter, loadingGoods, errorLoadingGoods,
     currentCustomer, setCurrentCustomer,
     cart, addToCart, removeFromCart,
-    showModal, handleCloseModal,
+    showModal, handleShowModal, handleCloseModal, // handleShowModal ditambahkan
     resultCountPrice, loadingCountPrice, errorCountPrice,
     discounts, setDiscounts,
     paymentAmount, setPaymentAmount,
@@ -275,7 +277,7 @@ function Dashboard() {
           <h4 className="mt-4"><BiCart /> Cart Customer #{currentCustomer + 1}</h4>
           <div style={{
             backgroundColor: '#f8f9fa', borderRadius: '5px',
-            height: "calc(100vh - 250px)", // Sesuaikan tinggi jika perlu
+            height: "calc(100vh - 250px)",
             display: "flex", flexDirection: "column"
           }}>
             {cart.length === 0 ? (
@@ -298,7 +300,11 @@ function Dashboard() {
               </div>
             )}
           </div>
-
+           {cart.length > 0 && (
+              <Button className='mt-2' variant="success" size="lg" disabled={loadingGoods} onClick={handleShowModal}>
+                  Selesaikan Pesanan
+              </Button>
+           )}
           <div className="d-flex gap-2 mt-3">
             <Button
               variant="secondary"
@@ -312,7 +318,7 @@ function Dashboard() {
               variant="primary"
               size="sm"
               onClick={handleNextCustomer}
-              disabled={currentCustomer === 1}
+              disabled={currentCustomer >= 4} // Batas 5 customer (0-4)
             >
               Next Customer &raquo;
             </Button>
@@ -321,7 +327,6 @@ function Dashboard() {
         </Col>
       </Row>
 
-      {/* Modal Konfirmasi Transaksi (sekarang menggunakan state dari context) */}
       <Modal show={showModal} onHide={handleCloseModal} centered size="lg">
         <Modal.Header closeButton>
           <Modal.Title>Konfirmasi Transaksi</Modal.Title>
@@ -363,22 +368,17 @@ function Dashboard() {
                             variant="outline-danger"
                             onClick={() => handleDiscountChange(idx, 'decrease')}
                             disabled={currentDiscount === 0}
-                          >
-                            -
-                          </Button>
+                          > - </Button>
                           <Form.Control
                             className="text-center fw-bold"
                             value={currentDiscount.toLocaleString('id-ID')}
                             readOnly
-                            aria-label="Discount amount"
                           />
                           <Button
                             variant="outline-success"
                             onClick={() => handleDiscountChange(idx, 'increase', item.totalPrice)}
                             disabled={currentDiscount >= item.totalPrice}
-                          >
-                            +
-                          </Button>
+                          > + </Button>
                         </InputGroup>
                       </td>
                       <td className="text-end">
@@ -462,7 +462,6 @@ function Dashboard() {
           <div className="d-flex flex-wrap justify-content-center mb-4">
             {presetWeights.map((preset) => {
               const presetPrice = getPrice(preset.value);
-
               return (
                 <Button
                   key={preset.value}
@@ -478,13 +477,9 @@ function Dashboard() {
                   onClick={() => handlePresetAddToCart(preset.value, presetPrice)}
                   disabled={presetPrice === 0}
                 >
-                  <span className="fw-bold" style={{ fontSize: '1rem' }}>
-                    {preset.label}
-                  </span>
+                  <span className="fw-bold" style={{ fontSize: '1rem' }}>{preset.label}</span>
                   {presetPrice > 0 ? (
-                    <small style={{ fontSize: '0.85rem' }}>
-                      Rp {presetPrice.toLocaleString('id-ID')}
-                    </small>
+                    <small style={{ fontSize: '0.85rem' }}>Rp {presetPrice.toLocaleString('id-ID')}</small>
                   ) : (
                     <small className="text-muted">N/A</small>
                   )}
@@ -493,34 +488,31 @@ function Dashboard() {
             })}
           </div>
           <hr />
-          <Form.Group className="mb-4">
-            <Form.Label>
-              Berat (Kg): {kgValue} kg{" "}
-              {priceKg > 0 && <span className="text-success">Rp {priceKg.toLocaleString()}</span>}
-            </Form.Label>
-            <Form.Range
+          
+          <div className='sliders-container'>
+            <CustomRangeSlider
+              label={`Kelipatan 1 Kg (0 - 20 Kg)`}
+              value={kgValue}
               min={0}
               max={20}
               step={1}
-              value={Math.min(kgValue, 20)}
-              readOnly
               onChange={(e) => setKgValue(parseInt(e.target.value, 10))}
+              price={priceKg}
+              unit="kg"
+              iconType="kg"
             />
-          </Form.Group>
-
-          <Form.Group>
-            <Form.Label>
-              Berat (Gram): {gramValue} g{" "}
-              {priceGram > 0 && <span className="text-success">Rp {priceGram.toLocaleString()}</span>}
-            </Form.Label>
-            <Form.Range
+            <CustomRangeSlider
+              label={`Kelipatan 50 gr (0 - 950 gr)`}
+              value={gramValue}
               min={0}
               max={950}
               step={50}
-              value={gramValue}
-              onChange={(e) => setGramValue(parseInt(e.target.value))}
+              onChange={(e) => setGramValue(parseInt(e.target.value, 10))}
+              price={priceGram}
+              unit="gr"
+              iconType="gr"
             />
-          </Form.Group>
+          </div>
 
           <div className="mt-4 p-3 border rounded bg-light">
             <strong>Total:</strong> {totalWeight / 1000} kg ({totalWeight} g) <br />
@@ -528,9 +520,7 @@ function Dashboard() {
           </div>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={handleCloseModalCstmW}>
-            Tutup
-          </Button>
+          <Button variant="secondary" onClick={handleCloseModalCstmW}>Tutup</Button>
           <Button variant="primary" onClick={() => handleAddToCartFromModal(selectedItemNm, selectedIdItem, totalWeight, totalPrice)}>
             Tambahkan ke keranjang customer {currentCustomer + 1}
           </Button>
@@ -539,5 +529,66 @@ function Dashboard() {
     </div>
   );
 }
+
+const CustomRangeSlider = ({ label, value, min, max, step, onChange, price, unit, iconType }) => {
+  const [tooltipActive, setTooltipActive] = useState(false);
+
+  const bars = useMemo(() => {
+    return Array.from({ length: 20 });
+  }, []);
+
+  const percentage = max > min ? ((value - min) * 100) / (max - min) : 0;
+
+  const handleInteraction = (e) => {
+    onChange(e);
+    setTooltipActive(true);
+  };
+  const handleMouseUp = () => setTooltipActive(false);
+
+  const renderIcon = () => {
+    if (iconType === 'kg') return <FaShoppingBag className="me-3" />;
+    if (iconType === 'gr') return <FaBalanceScale className="me-3" />;
+    return null;
+  };
+
+  return (
+    <div className="slider-group">
+      <div className="volume-bar-container">
+        {bars.map((_, index) => {
+          const barPercentage = (index / (bars.length - 1)) * 100;
+          const isActive = barPercentage <= percentage;
+          const height = 10 + barPercentage;
+          return (
+            <div
+              key={index}
+              className={`bar ${isActive ? 'active' : ''}`}
+              style={{ height: `${height}%` }}
+            ></div>
+          );
+        })}
+      </div>
+      <label>{renderIcon()}{label}</label>
+      <div className="custom-slider-container">
+        <div className="custom-slider-track-bg"></div>
+        <div className="custom-slider-track-volume" style={{ width: `${percentage}%` }}></div>
+        <input
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          className="custom-slider-input"
+          onChange={handleInteraction}
+          onMouseUp={handleMouseUp}
+          onTouchEnd={handleMouseUp}
+        />
+        <div className={`slider-tooltip ${tooltipActive ? 'active' : ''}`} style={{ left: `${percentage}%` }}>
+          {value} {unit}
+          <span className="tooltip-price">Rp {price.toLocaleString('id-ID')}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default Dashboard;

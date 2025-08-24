@@ -1,0 +1,138 @@
+/* === Gaya untuk Slider Kustom === */
+
+:root {
+  --border-color: #e9ecef;
+  --primary-color: #845ef7;
+}
+
+.sliders-container {
+  margin-top: 1.7rem;
+}
+
+.slider-group {
+  position: relative;
+  margin-bottom: 4rem;
+  text-align: center;
+}
+
+.volume-bar-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  height: 50px;
+  margin-bottom: 10px;
+  padding: 0 5px;
+}
+
+.volume-bar-container .bar {
+  width: 3%;
+  background-color: var(--border-color);
+  border-radius: 4px;
+  transition: all 0.1s ease-in-out;
+}
+
+.volume-bar-container .bar.active {
+  background: linear-gradient(to top, #6ee7b7, #34d399);
+}
+
+.slider-group label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  font-size: 0.9em;
+  background-color: #212529;
+  color: white;
+  padding: 5px 20px;
+  border-radius: 8px;
+}
+
+.custom-slider-container {
+  position: relative;
+  height: 10px;
+  display: flex;
+  align-items: center;
+}
+
+.custom-slider-track-bg,
+.custom-slider-track-volume {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.custom-slider-track-bg {
+  background-color: var(--border-color);
+  border-radius: 8px;
+}
+
+.custom-slider-track-volume {
+  background: linear-gradient(to right, #6ee7b7, #34d399);
+  border-radius: 8px;
+  width: 0%;
+}
+
+input[type=range].custom-slider-input {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  z-index: 2;
+  margin: 0;
+  padding: 0;
+}
+
+input[type=range].custom-slider-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 24px;
+  width: 24px;
+  border-radius: 50%;
+  background: var(--primary-color);
+  border: 4px solid white;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
+  margin-top: -7px;
+}
+
+input[type=range].custom-slider-input::-moz-range-thumb {
+  height: 24px;
+  width: 24px;
+  border-radius: 50%;
+  background: var(--primary-color);
+  border: 4px solid white;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
+}
+
+.slider-tooltip {
+  display: none;
+  position: absolute;
+  background: #212529;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  font-size: 1rem;
+  text-align: center;
+  top: -45px;
+  transform: translateX(-50%);
+  z-index: 5;
+}
+
+.slider-tooltip .tooltip-price {
+  font-size: 0.85em;
+  opacity: 0.8;
+  display: block;
+}
+
+.slider-tooltip.active {
+  display: block;
+}
