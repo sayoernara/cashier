@@ -311,7 +311,7 @@ function MainLayout() {
               Retur
             </NavLink>
             <NavLink to="/transaksi" className={({ isActive }) => `nav-link ${isActive ? "fw-bold text-primary" : "text-dark"}`}>
-              Daftar Transaksi
+              Riwayat Transaksi Kasir
             </NavLink>
 
             {/* Tombol Keranjang/Selesaikan Pesanan yang baru */}
