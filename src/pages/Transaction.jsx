@@ -107,8 +107,6 @@ function Transaction() {
                                         <th>Nama Barang</th>
                                         <th>Berat Barang</th>
                                         <th>Harga</th>
-                                        <th>Diskon</th>
-                                        <th>Harga (Nett)</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -118,13 +116,11 @@ function Transaction() {
                                             <td>{trx.cashier}</td>
                                             <td>{trx.item_nm}</td>
                                             <td>{trx.weight_kg} kg</td>
-                                            <td>Rp {trx.grossprice}</td>
-                                            <td>Rp {trx.discount}</td>
                                             <td>Rp {trx.nettprice}</td>
                                         </tr>
                                     ))}
                                     <tr className="table-secondary fw-bold">
-                                        <td colSpan={6} className="text-end">Total Nett</td>
+                                        <td colSpan={4} className="text-end">Total Nett</td>
                                         <td>Rp {totalNett}</td>
                                     </tr>
                                 </tbody>
