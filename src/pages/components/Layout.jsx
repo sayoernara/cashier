@@ -131,7 +131,6 @@ function MainLayout() {
 
     try {
       const response = await saveSellTransaction(transactionPayload);
-      console.log(response);
       if (response && response.data && response.data.message.number) {
         const updatedCart = [];
         setCart(updatedCart);
