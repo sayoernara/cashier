@@ -111,6 +111,7 @@ function MainLayout() {
 
   const fetchTransaction = async (summaryData) => {
     setLoadingSaveTransaction(true);
+
     const transactionPayload = {
       customerIndex: currentCustomer,
       items: resultCountPrice.map((item, index) => ({
@@ -127,17 +128,32 @@ function MainLayout() {
       cashier: getStorageData().decryptuname,
       transactionDate: new Date().toISOString(),
     };
+
     try {
-      await saveSellTransaction(transactionPayload);
-      // Clear cart for the current customer after successful transaction
-      const updatedCart = [];
-      setCart(updatedCart);
-      saveCartToStorage(currentCustomer, updatedCart);
+      const response = await saveSellTransaction(transactionPayload);
+      console.log(response);
+      if (response && response.data && response.data.message.number) {
+        const updatedCart = [];
+        setCart(updatedCart);
+        saveCartToStorage(currentCustomer, updatedCart);
+
+        return {
+          success: true,
+          transactionNumber: response.data.message.number,
+        };
+      } else {
+        throw new Error("Respons dari server tidak valid atau tidak menyertakan nomor transaksi.");
+      }
 
     } catch (error) {
       setErrorSaveTransaction(error.message);
-      Swal.fire('Error', 'Gagal menyimpan transaksi.', 'error');
+      Swal.fire('Error', `Gagal menyimpan transaksi: ${error.message}`, 'error');
+
+      // 3. LEMPAR KEMBALI error agar bisa ditangkap oleh .catch() di Dashboard
+      throw error;
+
     } finally {
+      // Selalu jalankan ini di akhir, baik sukses maupun gagal
       handleCloseModal();
       setLoadingSaveTransaction(false);
     }

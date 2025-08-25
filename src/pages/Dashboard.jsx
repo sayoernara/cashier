@@ -5,15 +5,82 @@ import { BiCart } from 'react-icons/bi';
 import { CiImageOff } from 'react-icons/ci';
 import { GoodsContext } from './components/GoodsContext';
 import { FaShoppingBag, FaBalanceScale } from 'react-icons/fa';
-import './Dashboard.css'; // Memuat gaya dari file CSS eksternal
+import './Dashboard.css'; 
+import Swal from 'sweetalert2';
+
+// --- FUNGSI HELPER UNTUK CETAK ---
+const printReceipt = async (receiptData) => {
+  try {
+    const { items, summary, transactionNumber } = receiptData;
+
+    // Helper untuk membuat garis pemisah
+    const line = '--------------------------------\n';
+
+    // 1. Format Teks Struk
+    let receiptText = '';
+    receiptText += '       Sayoernara\n';
+    receiptText += `No: ${transactionNumber}\n`;
+    receiptText += `Tgl: ${new Date().toLocaleString('id-ID')}\n`;
+    receiptText += line;
+
+    items.forEach(item => {
+      const priceAfterDiscount = item.totalPrice - (item.discount || 0);
+      const itemName = `${item.comodity} (${item.totalWeight} gr)`;
+      const itemPrice = `Rp ${priceAfterDiscount.toLocaleString('id-ID')}`;
+      
+      // Mengatur agar harga rata kanan
+      const receiptWidth = 32; // Lebar struk thermal standar (32 karakter)
+      const spaces = receiptWidth - itemName.length - itemPrice.length;
+      receiptText += `${itemName}${' '.repeat(Math.max(0, spaces))}${itemPrice}\n`;
+    });
+
+    receiptText += line;
+    
+    // Fungsi helper untuk format baris summary
+    const formatSummaryLine = (label, value) => {
+        const receiptWidth = 32;
+        const formattedValue = `Rp ${value.toLocaleString('id-ID')}`;
+        const spaces = receiptWidth - label.length - formattedValue.length;
+        return `${label}${' '.repeat(Math.max(0, spaces))}${formattedValue}\n`;
+    }
+
+    receiptText += formatSummaryLine('Subtotal', summary.subtotal);
+    if (summary.totalDiscount > 0) {
+        receiptText += formatSummaryLine('Diskon', -summary.totalDiscount);
+    }
+    receiptText += formatSummaryLine('Grand Total', summary.grandTotal);
+    receiptText += line;
+    receiptText += formatSummaryLine('Bayar', summary.paymentAmount);
+    receiptText += formatSummaryLine('Kembali', summary.change);
+
+    receiptText += '\nTerima Kasih!\n\n';
+
+    // Perintah ESC/POS untuk memotong kertas (opsional, tergantung printer)
+    const cutCommand = '\x1D\x56\x42\x00'; 
+    receiptText += cutCommand;
+
+    // 2. Encode ke Base64
+    const base64String = btoa(receiptText);
+
+    // 3. Trigger URL RawBT
+    window.location.href = `rawbt:base64,${base64String}`;
+
+  } catch (error) {
+    console.error("Gagal mencetak struk:", error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Gagal Mencetak',
+      text: 'Pastikan aplikasi RawBT sudah terinstall dan berjalan dengan baik di perangkat Anda.',
+    });
+  }
+};
 
 function Dashboard() {
-  // Mengambil semua state dan fungsi dari Context
   const {
     groupedGoods, selectedLetter, loadingGoods, errorLoadingGoods,
     currentCustomer, setCurrentCustomer,
     cart, addToCart, removeFromCart,
-    showModal, handleShowModal, handleCloseModal, // handleShowModal ditambahkan
+    showModal, handleShowModal, handleCloseModal, 
     resultCountPrice, loadingCountPrice, errorCountPrice,
     discounts, setDiscounts,
     paymentAmount, setPaymentAmount,
@@ -83,8 +150,8 @@ function Dashboard() {
   const totalDiscount = discounts.reduce((sum, discount) => sum + (discount || 0), 0);
   const grandTotal = subtotal - totalDiscount;
   const change = parseInt(paymentAmount || 0, 10) - grandTotal;
-
-  const handleConfirmTransaction = () => {
+  
+  const handleConfirmTransaction = async () => {
     const summaryData = {
       subtotal: subtotal,
       totalDiscount: totalDiscount,
@@ -92,7 +159,36 @@ function Dashboard() {
       paymentAmount: parseInt(paymentAmount, 10),
       change: change,
     };
-    fetchTransaction(summaryData);
+    
+    try {
+      const response = await fetchTransaction(summaryData);
+      if (response && response.success) {
+        const receiptData = {
+          items: resultCountPrice.map((item, index) => ({
+            ...item,
+            discount: discounts[index] || 0,
+          })),
+          summary: summaryData,
+          transactionNumber: response.number,
+        };
+        
+        await printReceipt(receiptData);
+      } else {
+         Swal.fire({
+            icon: 'error',
+            title: 'Transaksi Gagal',
+            text: response.message || 'Gagal menyimpan transaksi, struk tidak akan dicetak.',
+        });
+      }
+
+    } catch (error) {
+      console.error("Error saat menyimpan transaksi:", error);
+       Swal.fire({
+          icon: 'error',
+          title: 'Koneksi Gagal',
+          text: 'Tidak dapat menyimpan transaksi ke server. Silakan coba lagi.',
+      });
+    }
   };
 
   const getPrice = (weight) => {
