@@ -5,66 +5,47 @@ import { BiCart } from 'react-icons/bi';
 import { CiImageOff } from 'react-icons/ci';
 import { GoodsContext } from './components/GoodsContext';
 import { FaShoppingBag, FaBalanceScale } from 'react-icons/fa';
-import './Dashboard.css'; 
+import './Dashboard.css';
 import Swal from 'sweetalert2';
 
 // --- FUNGSI HELPER UNTUK CETAK ---
 const printReceipt = async (receiptData) => {
   try {
     const { items, summary, transactionNumber } = receiptData;
-
-    // Helper untuk membuat garis pemisah
     const line = '--------------------------------\n';
-
-    // 1. Format Teks Struk
     let receiptText = '';
     receiptText += '       Sayoernara\n';
     receiptText += `No: ${transactionNumber}\n`;
     receiptText += `Tgl: ${new Date().toLocaleString('id-ID')}\n`;
     receiptText += line;
-
     items.forEach(item => {
       const priceAfterDiscount = item.totalPrice - (item.discount || 0);
       const itemName = `${item.comodity} (${item.totalWeight} gr)`;
       const itemPrice = `Rp ${priceAfterDiscount.toLocaleString('id-ID')}`;
-      
-      // Mengatur agar harga rata kanan
-      const receiptWidth = 32; // Lebar struk thermal standar (32 karakter)
+      const receiptWidth = 32;
       const spaces = receiptWidth - itemName.length - itemPrice.length;
       receiptText += `${itemName}${' '.repeat(Math.max(0, spaces))}${itemPrice}\n`;
     });
-
     receiptText += line;
-    
-    // Fungsi helper untuk format baris summary
     const formatSummaryLine = (label, value) => {
-        const receiptWidth = 32;
-        const formattedValue = `Rp ${value.toLocaleString('id-ID')}`;
-        const spaces = receiptWidth - label.length - formattedValue.length;
-        return `${label}${' '.repeat(Math.max(0, spaces))}${formattedValue}\n`;
+      const receiptWidth = 32;
+      const formattedValue = `Rp ${value.toLocaleString('id-ID')}`;
+      const spaces = receiptWidth - label.length - formattedValue.length;
+      return `${label}${' '.repeat(Math.max(0, spaces))}${formattedValue}\n`;
     }
-
     receiptText += formatSummaryLine('Subtotal', summary.subtotal);
     if (summary.totalDiscount > 0) {
-        receiptText += formatSummaryLine('Diskon', -summary.totalDiscount);
+      receiptText += formatSummaryLine('Diskon', -summary.totalDiscount);
     }
     receiptText += formatSummaryLine('Grand Total', summary.grandTotal);
     receiptText += line;
     receiptText += formatSummaryLine('Bayar', summary.paymentAmount);
     receiptText += formatSummaryLine('Kembali', summary.change);
-
     receiptText += '\nTerima Kasih!\n\n';
-
-    // Perintah ESC/POS untuk memotong kertas (opsional, tergantung printer)
-    const cutCommand = '\x1D\x56\x42\x00'; 
+    const cutCommand = '\x1D\x56\x42\x00';
     receiptText += cutCommand;
-
-    // 2. Encode ke Base64
     const base64String = btoa(receiptText);
-
-    // 3. Trigger URL RawBT
     window.location.href = `rawbt:base64,${base64String}`;
-
   } catch (error) {
     console.error("Gagal mencetak struk:", error);
     Swal.fire({
@@ -80,7 +61,7 @@ function Dashboard() {
     groupedGoods, selectedLetter, loadingGoods, errorLoadingGoods,
     currentCustomer, setCurrentCustomer,
     cart, addToCart, removeFromCart,
-    showModal, handleShowModal, handleCloseModal, 
+    showModal, handleShowModal, handleCloseModal,
     resultCountPrice, loadingCountPrice, errorCountPrice,
     discounts, setDiscounts,
     paymentAmount, setPaymentAmount,
@@ -121,7 +102,8 @@ function Dashboard() {
       setLoadingGoodsPrice(true);
       const result = await getGoodsPricePerGram(selectedIdItem);
       setGoodsPrice(result.data.price[0]);
-    } catch (err) {
+    } catch (err)
+      {
       setErrorGoodsPrice(err.message);
     } finally {
       setLoadingGoodsPrice(false);
@@ -150,7 +132,7 @@ function Dashboard() {
   const totalDiscount = discounts.reduce((sum, discount) => sum + (discount || 0), 0);
   const grandTotal = subtotal - totalDiscount;
   const change = parseInt(paymentAmount || 0, 10) - grandTotal;
-  
+
   const handleConfirmTransaction = async () => {
     const summaryData = {
       subtotal: subtotal,
@@ -159,7 +141,7 @@ function Dashboard() {
       paymentAmount: parseInt(paymentAmount, 10),
       change: change,
     };
-    
+
     try {
       const response = await fetchTransaction(summaryData);
       if (response && response.success) {
@@ -171,22 +153,22 @@ function Dashboard() {
           summary: summaryData,
           transactionNumber: response.number,
         };
-        
+
         await printReceipt(receiptData);
       } else {
-         Swal.fire({
-            icon: 'error',
-            title: 'Transaksi Gagal',
-            text: response.message || 'Gagal menyimpan transaksi, struk tidak akan dicetak.',
+        Swal.fire({
+          icon: 'error',
+          title: 'Transaksi Gagal',
+          text: response.message || 'Gagal menyimpan transaksi, struk tidak akan dicetak.',
         });
       }
 
     } catch (error) {
       console.error("Error saat menyimpan transaksi:", error);
-       Swal.fire({
-          icon: 'error',
-          title: 'Koneksi Gagal',
-          text: 'Tidak dapat menyimpan transaksi ke server. Silakan coba lagi.',
+      Swal.fire({
+        icon: 'error',
+        title: 'Koneksi Gagal',
+        text: 'Tidak dapat menyimpan transaksi ke server. Silakan coba lagi.',
       });
     }
   };
@@ -216,11 +198,14 @@ function Dashboard() {
   const totalWeight = kgInGram + gramValue;
   const totalPrice = priceKg + priceGram;
 
+  const displayWeight = totalWeight > 950
+    ? `${(totalWeight / 1000).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 3 })} KG`
+    : `${totalWeight} GR`;
+
   const handleAddToCartFromModal = (selectedItemNm, selectedIdItem, totalWeight, totalPrice) => {
     if (totalWeight > 0 && totalPrice > 0) {
       addToCart(selectedItemNm, selectedIdItem, totalWeight, totalPrice);
     }
-    handleCloseModalCstmW();
   }
 
   const handleDiscountChange = (index, operation, itemPrice) => {
@@ -254,7 +239,6 @@ function Dashboard() {
     if (weight > 0 && price > 0) {
       addToCart(selectedItemNm, selectedIdItem, weight, price);
     }
-    handleCloseModalCstmW();
   };
 
   return (
@@ -287,6 +271,7 @@ function Dashboard() {
               <Row className="g-2">
                 {filteredComodities.map((comodity, idx) => {
                   const representativeItem = groupedGoods[comodity]?.[0];
+                  
                   return (
                     <Col key={idx} xs={12} sm={6} md={4} lg={6}>
                       <Card className="h-100 shadow-sm border-0">
@@ -381,8 +366,8 @@ function Dashboard() {
             ) : (
               <div className='cartitemlist' style={{ flex: 1, overflowY: "auto" }}>
                 <ul className="list-group small shadow-sm rounded">
-                  {[...cart].reverse().map((item, idx) => (
-                    <li key={`${item.comodity}-${idx}`} className="list-group-item d-flex justify-content-between align-items-center">
+                  {[...cart].reverse().map((item, index) => (
+                    <li key={index} className="list-group-item d-flex justify-content-between align-items-center">
                       <div>
                         <strong>{item.comodity}</strong>
                         <div className="text-muted">Total: {item.totalWeight} gr</div>
@@ -605,15 +590,36 @@ function Dashboard() {
             />
           </div>
 
-          <div className="mt-4 p-3 border rounded bg-light">
-            <strong>Total:</strong> {totalWeight / 1000} kg ({totalWeight} g) <br />
-            <strong>Harga:</strong> Rp {totalPrice.toLocaleString()}
+          <div className="modal-bottom-container">
+            <div className="added-items-container">
+              {cart.filter(item => item.comodity === selectedItemNm).map((item, index) => (
+                <div key={index} className="added-item-card">
+                  {item.totalWeight > 950 ? `${item.totalWeight / 1000} KG` : `${item.totalWeight} GR`}
+                  <div className="delete-item-icon" onClick={() => removeFromCart(item.comodity)}>
+                    &times;
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="total-summary-box">
+              <div className="total-summary-header">{selectedItemNm}</div>
+              <div className="total-summary-row">
+                <span className="total-summary-value">{displayWeight}</span>
+              </div>
+              <div className="total-summary-row price">
+                <span className="total-summary-value">
+                  {totalPrice.toLocaleString('id-ID')}
+                </span>
+              </div>
+            </div>
           </div>
+
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={handleCloseModalCstmW}>Tutup</Button>
           <Button variant="primary" onClick={() => handleAddToCartFromModal(selectedItemNm, selectedIdItem, totalWeight, totalPrice)}>
-            Tambahkan ke keranjang customer {currentCustomer + 1}
+            Tambahkan
           </Button>
         </Modal.Footer>
       </Modal>
