@@ -1,3 +1,30 @@
+/* === Gaya Global untuk Layout Tetap === */
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  height: 100vh; /* Mengisi tinggi viewport */
+  overflow: hidden; /* Mencegah scrolling di level body */
+  background-color: #f0f2f5; /* Opsi: ganti warna background body */
+}
+
+.modal-dialog {
+  /* PERBAIKAN UTAMA: Mengatur lebar agar stabil saat di-zoom */
+  max-width: 800px; /* Atur lebar maksimal modal, sesuaikan jika perlu */      /* Gunakan 90% lebar layar, tapi tidak akan melebihi max-width */
+  margin: 0rem auto; /* Memberi jarak atas/bawah dan membuatnya center horizontal */
+}
+
+.modal-body {
+  padding-top: 0;
+  padding-bottom: 1; 
+}
+
+.modal-body hr {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
 /* === Gaya untuk Slider Kustom === */
 
 :root {
@@ -6,12 +33,12 @@
 }
 
 .sliders-container {
-  margin-top: 1.7rem;
+  margin-top: 1rem; 
 }
 
 .slider-group {
   position: relative;
-  margin-bottom: 4rem;
+  margin-bottom: 2rem;
   text-align: center;
 }
 
@@ -143,22 +170,22 @@ input[type=range].custom-slider-input::-moz-range-thumb {
   background-color: #ffffff;
   border: 2px solid #000000;
   border-radius: 12px;
-  padding: 8px;
+  padding: 4px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
+  gap: 3px;
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  width: 350px; 
-  flex-shrink: 0; /* Mencegah kotak ini menyusut */
+  width: 280px;      
+  flex-shrink: 0; 
 }
 
 .total-summary-header {
-  font-size: 1.2rem;
+  font-size: 1rem;
   font-weight: 700;
   background-color: #000000;
   color: #ffffff;
-  padding: 5px 15px;
+  padding: 4px 10px;
   width: 100%;
   text-align: center;
   border-radius: 8px;
@@ -168,7 +195,7 @@ input[type=range].custom-slider-input::-moz-range-thumb {
 .total-summary-row {
   width: 100%;
   text-align: center;
-  padding: 5px 0;
+  padding: 2px 0;
   border-radius: 8px;
 }
 
@@ -179,7 +206,7 @@ input[type=range].custom-slider-input::-moz-range-thumb {
 
 .total-summary-value {
   font-weight: 700;
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   letter-spacing: 1px;
 }
 
@@ -230,10 +257,9 @@ input[type=range].custom-slider-input::-moz-range-thumb {
 /* === Kontainer Bawah Modal === */
 .modal-bottom-container {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start; 
+  align-items: flex-start;
   gap: 1.5rem;
-  margin-top: 1.5rem;
+  margin-top: 1rem;
 }
 
 .added-items-container {

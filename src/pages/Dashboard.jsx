@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useContext, useMemo } from 'react';
+import React, { useCallback, useState, useContext, useMemo, useEffect } from 'react';
 import { getGoodsPricePerGram } from './apis/api';
 import { Alert, Col, Row, Spinner, Card, Button, Modal, Form, InputGroup, ListGroup, Table } from 'react-bootstrap';
 import { BiCart } from 'react-icons/bi';
@@ -55,158 +55,275 @@ const printReceipt = async (receiptData) => {
     });
   }
 };
+// --- KELOMPOK KOMPONEN UNTUK CUSTOMISASI BERAT (MODAL & SLIDER) ---
+const CustomRangeSlider = ({ label, value, min, max, step, onChange, price, unit, iconType, onRelease }) => { // MODIFIKASI: Tambah prop onRelease
+  const [tooltipActive, setTooltipActive] = useState(false);
+  const bars = useMemo(() => Array.from({ length: 20 }), []);
+  const percentage = max > min ? ((value - min) * 100) / (max - min) : 0;
 
-function Dashboard() {
-  const {
-    groupedGoods, selectedLetter, loadingGoods, errorLoadingGoods,
-    currentCustomer, setCurrentCustomer,
-    cart, addToCart, removeFromCart,
-    showModal, handleShowModal, handleCloseModal,
-    resultCountPrice, loadingCountPrice, errorCountPrice,
-    discounts, setDiscounts,
-    paymentAmount, setPaymentAmount,
-    fetchTransaction, loadingSaveTransaction
-  } = useContext(GoodsContext);
+  const handleInteraction = (e) => {
+    onChange(e);
+    setTooltipActive(true);
+  };
+  
+  // MODIFIKASI: Panggil onRelease saat slider dilepas
+  const handleMouseUp = () => {
+    setTooltipActive(false);
+    if (onRelease) {
+      onRelease();
+    }
+  };
 
-  // State lokal hanya untuk modal kustomisasi berat
-  const [showModalCstmW, setShowModalCstmW] = useState(false);
-  const [selectedIdItem, setSelectedIdItem] = useState('');
-  const [selectedItemNm, setSelectedItemNm] = useState('');
+  const renderIcon = () => {
+    if (iconType === 'kg') return <FaShoppingBag className="me-3" />;
+    if (iconType === 'gr') return <FaBalanceScale className="me-3" />;
+    return null;
+  };
+
+  return (
+    <div className="slider-group">
+      <div className="volume-bar-container">
+        {bars.map((_, index) => {
+          const barPercentage = (index / (bars.length - 1)) * 100;
+          const isActive = barPercentage <= percentage;
+          const height = 10 + barPercentage;
+          return <div key={index} className={`bar ${isActive ? 'active' : ''}`} style={{ height: `${height}%` }} ></div>;
+        })}
+      </div>
+      <label>{renderIcon()}{label}</label>
+      <div className="custom-slider-container">
+        <div className="custom-slider-track-bg"></div>
+        <div className="custom-slider-track-volume" style={{ width: `${percentage}%` }}></div>
+        <input
+          type="range"
+          min={min} max={max} step={step} value={value}
+          className="custom-slider-input"
+          onChange={handleInteraction} onMouseUp={handleMouseUp} onTouchEnd={handleMouseUp}
+        />
+        <div className={`slider-tooltip ${tooltipActive ? 'active' : ''}`} style={{ left: `${percentage}%` }}>
+          {value} {unit}
+          <span className="tooltip-price">Rp {price.toLocaleString('id-ID')}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const CustomWeightModal = ({ show, onHide, itemId, itemName }) => {
+  const { cart, addToCart, removeFromCart } = useContext(GoodsContext);
   const [errorGoodsPrice, setErrorGoodsPrice] = useState(null);
   const [loadingGoodsPrice, setLoadingGoodsPrice] = useState(false);
   const [goodsPrice, setGoodsPrice] = useState([]);
   const [kgValue, setKgValue] = useState(0);
   const [gramValue, setGramValue] = useState(0);
 
-  const DISCOUNT_STEP = 500;
-
-  // ----- FUNGSI LOKAL UNTUK MODAL KUSTOMISASI BERAT -----
-  const handleCloseModalCstmW = () => {
-    setSelectedIdItem('');
-    setSelectedItemNm('');
-    setShowModalCstmW(false);
-    setGoodsPrice([]);
-    setKgValue(0);
-    setGramValue(0);
-  };
-
-  const handleShowModalCstmW = (id, itemnm) => {
-    setSelectedIdItem(id);
-    setSelectedItemNm(itemnm);
-    setShowModalCstmW(true);
-    fetchGoodsPricePerGram(id);
-  };
-
   const fetchGoodsPricePerGram = useCallback(async (selectedIdItem) => {
+    if (!selectedIdItem) return;
     try {
       setLoadingGoodsPrice(true);
+      setErrorGoodsPrice(null);
       const result = await getGoodsPricePerGram(selectedIdItem);
-      setGoodsPrice(result.data.price[0]);
-    } catch (err)
-      {
+      setGoodsPrice(result.data.price[0] || []);
+    } catch (err) {
       setErrorGoodsPrice(err.message);
     } finally {
       setLoadingGoodsPrice(false);
     }
   }, []);
-  // ----- AKHIR FUNGSI LOKAL -----
 
-
-  const filteredComodities = Object.keys(groupedGoods).filter((comodity) => {
-    if (!selectedLetter) return true;
-    return comodity.toUpperCase().startsWith(selectedLetter);
-  });
-
-  const handleNextCustomer = () => {
-    setCurrentCustomer((prev) => prev + 1);
-  };
-
-  const handlePrevCustomer = () => {
-    if (currentCustomer > 0) {
-      setCurrentCustomer((prev) => prev - 1);
+  useEffect(() => {
+    if (show) {
+      fetchGoodsPricePerGram(itemId);
+    } else {
+      setKgValue(0);
+      setGramValue(0);
+      setGoodsPrice([]);
+      setErrorGoodsPrice(null);
     }
-  };
-
-  // Logika perhitungan harga untuk modal transaksi
-  const subtotal = resultCountPrice.reduce((sum, item) => sum + item.totalPrice, 0);
-  const totalDiscount = discounts.reduce((sum, discount) => sum + (discount || 0), 0);
-  const grandTotal = subtotal - totalDiscount;
-  const change = parseInt(paymentAmount || 0, 10) - grandTotal;
-
-  const handleConfirmTransaction = async () => {
-    const summaryData = {
-      subtotal: subtotal,
-      totalDiscount: totalDiscount,
-      grandTotal: grandTotal,
-      paymentAmount: parseInt(paymentAmount, 10),
-      change: change,
-    };
-
-    try {
-      const response = await fetchTransaction(summaryData);
-      if (response && response.success) {
-        const receiptData = {
-          items: resultCountPrice.map((item, index) => ({
-            ...item,
-            discount: discounts[index] || 0,
-          })),
-          summary: summaryData,
-          transactionNumber: response.number,
-        };
-
-        await printReceipt(receiptData);
-      } else {
-        Swal.fire({
-          icon: 'error',
-          title: 'Transaksi Gagal',
-          text: response.message || 'Gagal menyimpan transaksi, struk tidak akan dicetak.',
-        });
-      }
-
-    } catch (error) {
-      console.error("Error saat menyimpan transaksi:", error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Koneksi Gagal',
-        text: 'Tidak dapat menyimpan transaksi ke server. Silakan coba lagi.',
-      });
-    }
-  };
+  }, [show, itemId, fetchGoodsPricePerGram]);
 
   const getPrice = (weight) => {
-    const found = goodsPrice.find(
-      (g) => parseInt(g.weight_Gr, 10) === weight
-    );
+    if (!goodsPrice || goodsPrice.length === 0) return 0;
+    const found = goodsPrice.find(g => parseInt(g.weight_Gr, 10) === weight);
     if (found) return parseInt(found.price_per_Gr, 10);
-
     if (weight % 1000 === 0) {
-      const base = goodsPrice.find((g) => parseInt(g.weight_Gr, 10) === 1000);
+      const base = goodsPrice.find(g => parseInt(g.weight_Gr, 10) === 1000);
       return base ? (weight / 1000) * parseInt(base.price_per_Gr, 10) : 0;
     }
-
     if (weight % 50 === 0) {
-      const base = goodsPrice.find((g) => parseInt(g.weight_Gr, 10) === 50);
+      const base = goodsPrice.find(g => parseInt(g.weight_Gr, 10) === 50);
       return base ? (weight / 50) * parseInt(base.price_per_Gr, 10) : 0;
     }
-
     return 0;
   };
 
-  const kgInGram = kgValue * 1000;
-  const priceKg = kgValue > 0 ? getPrice(kgInGram) : 0;
+  const presetWeights = [
+    { label: '50 gr', value: 50 }, { label: '100 gr', value: 100 },
+    { label: '250 gr', value: 250 }, { label: '500 gr', value: 500 },
+    { label: '750 gr', value: 750 }, { label: '1 kg', value: 1000 },
+  ];
+
+  const itemsInCart = useMemo(() => cart.filter(item => item.comodity === itemName), [cart, itemName]);
+  const totalInCartWeight = useMemo(() => itemsInCart.reduce((sum, item) => sum + item.totalWeight, 0), [itemsInCart]);
+  const totalInCartPrice = useMemo(() => itemsInCart.reduce((sum, item) => sum + item.totalPrice, 0), [itemsInCart]);
+
+  const sliderWeight = (kgValue * 1000) + gramValue;
+  const priceKg = kgValue > 0 ? getPrice(kgValue * 1000) : 0;
   const priceGram = gramValue > 0 ? getPrice(gramValue) : 0;
-  const totalWeight = kgInGram + gramValue;
-  const totalPrice = priceKg + priceGram;
+  const sliderPrice = priceKg + priceGram;
 
-  const displayWeight = totalWeight > 950
-    ? `${(totalWeight / 1000).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 3 })} KG`
-    : `${totalWeight} GR`;
+  const combinedTotalWeight = totalInCartWeight + sliderWeight;
+  const combinedTotalPrice = totalInCartPrice + sliderPrice;
 
-  const handleAddToCartFromModal = (selectedItemNm, selectedIdItem, totalWeight, totalPrice) => {
-    if (totalWeight > 0 && totalPrice > 0) {
-      addToCart(selectedItemNm, selectedIdItem, totalWeight, totalPrice);
+  const displayWeight = combinedTotalWeight > 950
+    ? `${(combinedTotalWeight / 1000).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 3 })} KG`
+    : `${combinedTotalWeight} GR`;
+
+  // BARU: Fungsi untuk menangani penambahan item saat slider KG dilepas
+  const handleKgSliderRelease = () => {
+    const weightInGram = kgValue * 1000;
+    if (weightInGram > 0 && priceKg > 0) {
+      addToCart(itemName, itemId, weightInGram, priceKg);
+      setKgValue(0); // Langsung reset slider
     }
-  }
+  };
+
+  // BARU: Fungsi untuk menangani penambahan item saat slider Gram dilepas
+  const handleGramSliderRelease = () => {
+    if (gramValue > 0 && priceGram > 0) {
+      addToCart(itemName, itemId, gramValue, priceGram);
+      setGramValue(0); // Langsung reset slider
+    }
+  };
+
+  const handlePresetAddToCart = (weight, price) => {
+    if (weight > 0 && price > 0) {
+      addToCart(itemName, itemId, weight, price);
+    }
+  };
+
+  return (
+    <Modal show={show} onHide={onHide} centered size='lg'>
+      <Modal.Body>
+        {loadingGoodsPrice && <div className="text-center"><Spinner animation="border" /></div>}
+        {errorGoodsPrice && <Alert variant="danger">{errorGoodsPrice}</Alert>}
+
+        <div className="d-flex flex-wrap justify-content-center mb-3">
+          {presetWeights.map((preset) => {
+            const presetPrice = getPrice(preset.value);
+            return (
+              <Button
+                key={preset.value} variant="dark"
+                className="m-2 d-flex flex-column justify-content-center align-items-center"
+                style={{ width: '110px', height: '80px', borderRadius: '8px', padding: '10px 5px', lineHeight: '1.3' }}
+                onClick={() => handlePresetAddToCart(preset.value, presetPrice)}
+                disabled={presetPrice === 0 || loadingGoodsPrice}
+              >
+                <span className="fw-bold" style={{ fontSize: '1rem' }}>{preset.label}</span>
+                {presetPrice > 0 ? <small style={{ fontSize: '0.85rem' }}>Rp {presetPrice.toLocaleString('id-ID')}</small> : <small className="text-muted">N/A</small>}
+              </Button>
+            );
+          })}
+        </div>
+        <hr />
+
+        <div className='sliders-container'>
+          <CustomRangeSlider
+            label={`Kelipatan 1 Kg (0 - 20 Kg)`} value={kgValue}
+            min={0} max={20} step={1}
+            onChange={(e) => setKgValue(parseInt(e.target.value, 10))}
+            price={priceKg} unit="kg" iconType="kg"
+            onRelease={handleKgSliderRelease} // MODIFIKASI: Kirim fungsi handler
+          />
+          <CustomRangeSlider
+            label={`Kelipatan 50 gr (0 - 950 gr)`} value={gramValue}
+            min={0} max={950} step={50}
+            onChange={(e) => setGramValue(parseInt(e.target.value, 10))}
+            price={priceGram} unit="gr" iconType="gr"
+            onRelease={handleGramSliderRelease} // MODIFIKASI: Kirim fungsi handler
+          />
+        </div>
+
+        <div className="modal-bottom-container">
+          <div className="added-items-container">
+            {itemsInCart.map((item, index) => (
+              <div key={index} className="added-item-card">
+                {item.totalWeight > 950 ? `${item.totalWeight / 1000} KG` : `${item.totalWeight} GR`}
+                <div className="delete-item-icon" onClick={() => removeFromCart(item.comodity, item.id)}>&times;</div>
+              </div>
+            ))}
+          </div>
+          <div className="total-summary-box">
+            <div className="total-summary-header">{itemName}</div>
+            <div className="total-summary-row">
+              <span className="total-summary-value">{displayWeight}</span>
+            </div>
+            <div className="total-summary-row price">
+              <span className="total-summary-value">{combinedTotalPrice.toLocaleString('id-ID')}</span>
+            </div>
+            {/* DIHAPUS: Tombol "+ Tambahkan" sudah tidak diperlukan lagi */}
+          </div>
+        </div>
+      </Modal.Body>
+    </Modal>
+  );
+};
+
+// ---KOMPONEN UNTUK KERANJANG BELANJA (CART) & TRANSAKSI ---
+const CartSidebar = ({ currentCustomer, cart, onRemove, onNext, onPrev }) => {
+  return (
+    <>
+      <h4 className="mt-4"><BiCart /> Cart Customer #{currentCustomer + 1}</h4>
+      <div style={{
+        backgroundColor: '#f8f9fa', borderRadius: '5px',
+        height: "calc(100vh - 250px)",
+        display: "flex", flexDirection: "column"
+      }}>
+        {cart.length === 0 ? (
+          <p className="text-muted small fst-italic m-2">Belum ada item</p>
+        ) : (
+          <div className='cartitemlist' style={{ flex: 1, overflowY: "auto" }}>
+            <ul className="list-group small shadow-sm rounded">
+              {[...cart].reverse().map((item, index) => (
+                <li key={index} className="list-group-item d-flex justify-content-between align-items-center">
+                  <div>
+                    <strong>{item.comodity}</strong>
+                    <div className="text-muted">Total: {item.totalWeight} gr</div>
+                  </div>
+                  <Button variant="outline-danger" size="sm" onClick={() => onRemove(item.comodity)}>
+                    Hapus
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+      <div className="d-flex gap-2 mt-3">
+        <Button variant="secondary" size="sm" onClick={onPrev} disabled={currentCustomer === 0}>
+          &laquo; Prev
+        </Button>
+        <Button variant="primary" size="sm" onClick={onNext} disabled={currentCustomer >= 4}>
+          Next Customer &raquo;
+        </Button>
+      </div>
+    </>
+  );
+};
+
+const TransactionModal = ({ show, onHide, currentCustomer }) => {
+  const {
+    resultCountPrice, loadingCountPrice, errorCountPrice,
+    discounts, setDiscounts, paymentAmount, setPaymentAmount,
+    fetchTransaction, loadingSaveTransaction
+  } = useContext(GoodsContext);
+
+  const DISCOUNT_STEP = 500;
+
+  const subtotal = useMemo(() => resultCountPrice.reduce((sum, item) => sum + item.totalPrice, 0), [resultCountPrice]);
+  const totalDiscount = useMemo(() => discounts.reduce((sum, discount) => sum + (discount || 0), 0), [discounts]);
+  const grandTotal = subtotal - totalDiscount;
+  const change = parseInt(paymentAmount || 0, 10) - grandTotal;
 
   const handleDiscountChange = (index, operation, itemPrice) => {
     const newDiscounts = [...discounts];
@@ -226,19 +343,129 @@ function Dashboard() {
     setPaymentAmount(value);
   };
 
-  const presetWeights = [
-    { label: '50 gr', value: 50 },
-    { label: '100 gr', value: 100 },
-    { label: '250 gr', value: 250 },
-    { label: '500 gr', value: 500 },
-    { label: '750 gr', value: 750 },
-    { label: '1 kg', value: 1000 },
-  ];
+  const handleConfirmTransaction = async () => {
+    const summaryData = {
+      subtotal, totalDiscount, grandTotal,
+      paymentAmount: parseInt(paymentAmount, 10),
+      change,
+    };
 
-  const handlePresetAddToCart = (weight, price) => {
-    if (weight > 0 && price > 0) {
-      addToCart(selectedItemNm, selectedIdItem, weight, price);
+    try {
+      const response = await fetchTransaction(summaryData);
+      if (response && response.success) {
+        const receiptData = {
+          items: resultCountPrice.map((item, index) => ({ ...item, discount: discounts[index] || 0 })),
+          summary: summaryData,
+          transactionNumber: response.number,
+        };
+        await printReceipt(receiptData);
+      } else {
+        Swal.fire({ icon: 'error', title: 'Transaksi Gagal', text: response.message || 'Gagal menyimpan transaksi, struk tidak akan dicetak.' });
+      }
+    } catch (error) {
+      console.error("Error saat menyimpan transaksi:", error);
+      Swal.fire({ icon: 'error', title: 'Koneksi Gagal', text: 'Tidak dapat menyimpan transaksi ke server. Silakan coba lagi.' });
     }
+  };
+
+  return (
+    <Modal show={show} onHide={onHide} centered size="lg">
+      <Modal.Header closeButton>
+        <Modal.Title>Konfirmasi Transaksi</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        <p>Rincian belanja untuk <strong>Customer #{currentCustomer + 1}</strong>:</p>
+        {loadingCountPrice ? (
+          <div className="d-flex justify-content-center p-5"><Spinner animation="border" variant="primary" /></div>
+        ) : errorCountPrice ? (
+          <Alert variant="danger">{errorCountPrice}</Alert>
+        ) : (
+          <Table responsive>
+            <thead><tr className="table-light"><th>Produk</th><th className="text-center">Diskon (Rp)</th><th className="text-end">Harga Akhir</th></tr></thead>
+            <tbody>
+              {resultCountPrice.map((item, idx) => {
+                const currentDiscount = discounts[idx] || 0;
+                const priceAfterDiscount = item.totalPrice - currentDiscount;
+                return (
+                  <tr key={idx} className="align-middle">
+                    <td><strong>{item.comodity}</strong><div className="text-muted small">{item.totalWeight} gr</div></td>
+                    <td className="text-center">
+                      <InputGroup style={{ minWidth: '150px', margin: 'auto' }}>
+                        <Button variant="outline-danger" onClick={() => handleDiscountChange(idx, 'decrease')} disabled={currentDiscount === 0}>-</Button>
+                        <Form.Control className="text-center fw-bold" value={currentDiscount.toLocaleString('id-ID')} readOnly />
+                        <Button variant="outline-success" onClick={() => handleDiscountChange(idx, 'increase', item.totalPrice)} disabled={currentDiscount >= item.totalPrice}>+</Button>
+                      </InputGroup>
+                    </td>
+                    <td className="text-end">
+                      <span className="fw-bold fs-6">Rp {priceAfterDiscount.toLocaleString('id-ID')}</span>
+                      {currentDiscount > 0 && <div className="text-muted small text-decoration-line-through">Rp {item.totalPrice.toLocaleString('id-ID')}</div>}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </Table>
+        )}
+        <hr />
+        <ListGroup variant="flush">
+          <ListGroup.Item className="d-flex justify-content-between align-items-center ps-0 pe-0"><span>Subtotal</span><span>Rp {subtotal.toLocaleString()}</span></ListGroup.Item>
+          <ListGroup.Item className="d-flex justify-content-between align-items-center ps-0 pe-0"><span>Total Diskon</span><span className="text-danger">- Rp {totalDiscount.toLocaleString()}</span></ListGroup.Item>
+          <ListGroup.Item className="d-flex justify-content-between align-items-center ps-0 pe-0 fw-bolder fs-5"><span>TOTAL AKHIR</span><span className="text-primary">Rp {grandTotal.toLocaleString()}</span></ListGroup.Item>
+        </ListGroup>
+        <Form.Group className="my-3">
+          <Form.Label className="fw-bold">Nominal Bayar</Form.Label>
+          <InputGroup>
+            <InputGroup.Text>Rp</InputGroup.Text>
+            <Form.Control type="text" value={paymentAmount ? parseInt(paymentAmount, 10).toLocaleString('id-ID') : ""} onChange={handlePaymentChange} placeholder="Masukkan jumlah uang pembayaran" size="lg" autoFocus />
+          </InputGroup>
+        </Form.Group>
+        {paymentAmount && change >= 0 && (
+          <div className="alert alert-success d-flex justify-content-between align-items-center fw-bolder fs-5">
+            <span>Kembalian</span><span>Rp {change.toLocaleString()}</span>
+          </div>
+        )}
+      </Modal.Body>
+      <Modal.Footer>
+        <Button variant="secondary" onClick={onHide}>Tutup</Button>
+        <Button variant="primary" onClick={handleConfirmTransaction} disabled={change < 0 || !paymentAmount || loadingSaveTransaction}>
+          {loadingSaveTransaction ? (<><Spinner as="span" animation="border" size="sm" /> Menyimpan...</>) : 'Konfirmasi & Cetak Struk'}
+        </Button>
+      </Modal.Footer>
+    </Modal>
+  );
+};
+
+// --- KOMPONEN UTAMA DASHBOARD (SEKARANG BERTINDAK SEBAGAI "CONTROLLER") ---
+
+function Dashboard() {
+  const {
+    groupedGoods, selectedLetter, loadingGoods, errorLoadingGoods,
+    currentCustomer, setCurrentCustomer, cart, addToCart, removeFromCart,
+    showModal, handleCloseModal
+  } = useContext(GoodsContext);
+
+  const [showModalCstmW, setShowModalCstmW] = useState(false);
+  const [selectedIdItem, setSelectedIdItem] = useState('');
+  const [selectedItemNm, setSelectedItemNm] = useState('');
+
+  const handleShowModalCstmW = (id, itemnm) => {
+    setSelectedIdItem(id);
+    setSelectedItemNm(itemnm);
+    setShowModalCstmW(true);
+  };
+
+  const handleCloseModalCstmW = () => {
+    setShowModalCstmW(false);
+  };
+
+  const filteredComodities = Object.keys(groupedGoods).filter((comodity) => {
+    if (!selectedLetter) return true;
+    return comodity.toUpperCase().startsWith(selectedLetter);
+  });
+
+  const handleNextCustomer = () => setCurrentCustomer((prev) => prev + 1);
+  const handlePrevCustomer = () => {
+    if (currentCustomer > 0) setCurrentCustomer((prev) => prev - 1);
   };
 
   return (
@@ -269,11 +496,10 @@ function Dashboard() {
               }}
             >
               <Row className="g-2">
-                {filteredComodities.map((comodity, idx) => {
+                {filteredComodities.map((comodity) => {
                   const representativeItem = groupedGoods[comodity]?.[0];
-                  
                   return (
-                    <Col key={idx} xs={12} sm={6} md={4} lg={6}>
+                    <Col key={comodity} xs={12} sm={6} md={4} lg={6}>
                       <Card className="h-100 shadow-sm border-0">
                         <Card.Body>
                           {representativeItem.img ? (
@@ -289,7 +515,8 @@ function Dashboard() {
                                 display: 'block',
                                 margin: '0 auto',
                                 width: '45%',
-                                height: 'auto'
+                                height: 'auto',
+                                cursor: 'pointer'
                               }}
                               onClick={() => handleShowModalCstmW(representativeItem.id_item, comodity)}
                             />
@@ -297,21 +524,9 @@ function Dashboard() {
                           <Card.Title className="fs-6 fw-bold text-center">
                             {comodity}
                           </Card.Title>
-
                           <div className="d-flex flex-wrap gap-2 mt-2">
                             {groupedGoods[comodity].map((sub, i) => {
                               const isHighlighted = sub.weight_txt === "Kg";
-                              const headerStyle = {
-                                backgroundColor: "#2c3e50",
-                                color: "white",
-                                padding: "5px 8px",
-                              };
-                              const bodyStyle = {
-                                backgroundColor: isHighlighted ? "#2ecc71" : "white",
-                                color: isHighlighted ? "white" : "#2c3e50",
-                                padding: "8px 0",
-                              };
-
                               return (
                                 <Card
                                   key={i}
@@ -331,10 +546,11 @@ function Dashboard() {
                                     )
                                   }
                                 >
-                                  <div className="fw-bold" style={headerStyle}>
+                                  <div className="fw-bold"
+                                  style={{ backgroundColor: "#2c3e50", color: "white", padding: "5px 8px" }}>
                                     {sub.weight_txt}
                                   </div>
-                                  <div style={bodyStyle}>
+                                  <div style={{ backgroundColor: isHighlighted ? "#2ecc71" : "white", color: isHighlighted ? "white" : "#2c3e50", padding: "8px 0" }}>
                                     <div className="fw-bolder h2 m-0 lh-1">{sub.stock}</div>
                                     <div className="small fw-bold">
                                       {parseInt(sub.price_per_Gr) / 1000}
@@ -355,337 +571,30 @@ function Dashboard() {
         </Col>
 
         <Col md={3} style={{ flex: "0 0 30%" }}>
-          <h4 className="mt-4"><BiCart /> Cart Customer #{currentCustomer + 1}</h4>
-          <div style={{
-            backgroundColor: '#f8f9fa', borderRadius: '5px',
-            height: "calc(100vh - 250px)",
-            display: "flex", flexDirection: "column"
-          }}>
-            {cart.length === 0 ? (
-              <p className="text-muted small fst-italic m-2">Belum ada item</p>
-            ) : (
-              <div className='cartitemlist' style={{ flex: 1, overflowY: "auto" }}>
-                <ul className="list-group small shadow-sm rounded">
-                  {[...cart].reverse().map((item, index) => (
-                    <li key={index} className="list-group-item d-flex justify-content-between align-items-center">
-                      <div>
-                        <strong>{item.comodity}</strong>
-                        <div className="text-muted">Total: {item.totalWeight} gr</div>
-                      </div>
-                      <Button variant="outline-danger" size="sm" onClick={() => removeFromCart(item.comodity)}>
-                        Hapus
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-          <div className="d-flex gap-2 mt-3">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handlePrevCustomer}
-              disabled={currentCustomer === 0}
-            >
-              &laquo; Prev
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={handleNextCustomer}
-              disabled={currentCustomer >= 4} // Batas 5 customer (0-4)
-            >
-              Next Customer &raquo;
-            </Button>
-          </div>
-
+          <CartSidebar
+            currentCustomer={currentCustomer}
+            cart={cart}
+            onRemove={removeFromCart}
+            onNext={handleNextCustomer}
+            onPrev={handlePrevCustomer}
+          />
         </Col>
       </Row>
 
-      <Modal show={showModal} onHide={handleCloseModal} centered size="lg">
-        <Modal.Header closeButton>
-          <Modal.Title>Konfirmasi Transaksi</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <p>
-            Rincian belanja untuk <strong>Customer #{currentCustomer + 1}</strong>:
-          </p>
+      <TransactionModal
+        show={showModal}
+        onHide={handleCloseModal}
+        currentCustomer={currentCustomer}
+      />
 
-          {loadingCountPrice ? (
-            <div className="d-flex justify-content-center p-5">
-              <Spinner animation="border" variant="primary" />
-            </div>
-          ) : errorCountPrice ? (
-            <Alert variant="danger">{errorCountPrice}</Alert>
-          ) : (
-            <Table responsive>
-              <thead>
-                <tr className="table-light">
-                  <th>Produk</th>
-                  <th className="text-center">Diskon (Rp)</th>
-                  <th className="text-end">Harga Akhir</th>
-                </tr>
-              </thead>
-              <tbody>
-                {resultCountPrice.map((item, idx) => {
-                  const currentDiscount = discounts[idx] || 0;
-                  const priceAfterDiscount = item.totalPrice - currentDiscount;
-
-                  return (
-                    <tr key={idx} className="align-middle">
-                      <td>
-                        <strong>{item.comodity}</strong>
-                        <div className="text-muted small">{item.totalWeight} gr</div>
-                      </td>
-                      <td className="text-center">
-                        <InputGroup style={{ minWidth: '150px', margin: 'auto' }}>
-                          <Button
-                            variant="outline-danger"
-                            onClick={() => handleDiscountChange(idx, 'decrease')}
-                            disabled={currentDiscount === 0}
-                          > - </Button>
-                          <Form.Control
-                            className="text-center fw-bold"
-                            value={currentDiscount.toLocaleString('id-ID')}
-                            readOnly
-                          />
-                          <Button
-                            variant="outline-success"
-                            onClick={() => handleDiscountChange(idx, 'increase', item.totalPrice)}
-                            disabled={currentDiscount >= item.totalPrice}
-                          > + </Button>
-                        </InputGroup>
-                      </td>
-                      <td className="text-end">
-                        <span className="fw-bold fs-6">
-                          Rp {priceAfterDiscount.toLocaleString('id-ID')}
-                        </span>
-                        {currentDiscount > 0 && (
-                          <div className="text-muted small text-decoration-line-through">
-                            Rp {item.totalPrice.toLocaleString('id-ID')}
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </Table>
-          )}
-
-          <hr />
-
-          <ListGroup variant="flush">
-            <ListGroup.Item className="d-flex justify-content-between align-items-center ps-0 pe-0">
-              <span>Subtotal</span>
-              <span>Rp {subtotal.toLocaleString()}</span>
-            </ListGroup.Item>
-            <ListGroup.Item className="d-flex justify-content-between align-items-center ps-0 pe-0">
-              <span>Total Diskon</span>
-              <span className="text-danger">- Rp {totalDiscount.toLocaleString()}</span>
-            </ListGroup.Item>
-            <ListGroup.Item className="d-flex justify-content-between align-items-center ps-0 pe-0 fw-bolder fs-5">
-              <span>TOTAL AKHIR</span>
-              <span className="text-primary">Rp {grandTotal.toLocaleString()}</span>
-            </ListGroup.Item>
-          </ListGroup>
-
-          <Form.Group className="my-3">
-            <Form.Label className="fw-bold">Nominal Bayar</Form.Label>
-            <InputGroup>
-              <InputGroup.Text>Rp</InputGroup.Text>
-              <Form.Control
-                type="text"
-                value={paymentAmount ? parseInt(paymentAmount, 10).toLocaleString('id-ID') : ""}
-                onChange={handlePaymentChange}
-                placeholder="Masukkan jumlah uang pembayaran"
-                size="lg"
-                autoFocus
-              />
-            </InputGroup>
-          </Form.Group>
-
-          {paymentAmount && change >= 0 && (
-            <div className="alert alert-success d-flex justify-content-between align-items-center fw-bolder fs-5">
-              <span>Kembalian</span>
-              <span>Rp {change.toLocaleString()}</span>
-            </div>
-          )}
-        </Modal.Body>
-
-        <Modal.Footer>
-          <Button variant="secondary" onClick={handleCloseModal}>Tutup</Button>
-          <Button
-            variant="primary"
-            onClick={handleConfirmTransaction}
-            disabled={change < 0 || !paymentAmount || loadingSaveTransaction}
-          >
-            {loadingSaveTransaction ? (
-              <> <Spinner as="span" animation="border" size="sm" /> Menyimpan... </>
-            ) : (
-              'Konfirmasi & Cetak Struk'
-            )}
-          </Button>
-        </Modal.Footer>
-      </Modal>
-
-      <Modal show={showModalCstmW} onHide={handleCloseModalCstmW} centered size='lg'>
-        <Modal.Header closeButton>
-          <Modal.Title>Kustomisasi berat {selectedItemNm}</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <div className="d-flex flex-wrap justify-content-center mb-4">
-            {presetWeights.map((preset) => {
-              const presetPrice = getPrice(preset.value);
-              return (
-                <Button
-                  key={preset.value}
-                  variant="dark"
-                  className="m-2 d-flex flex-column justify-content-center align-items-center"
-                  style={{
-                    width: '110px',
-                    height: '80px',
-                    borderRadius: '8px',
-                    padding: '10px 5px',
-                    lineHeight: '1.3'
-                  }}
-                  onClick={() => handlePresetAddToCart(preset.value, presetPrice)}
-                  disabled={presetPrice === 0}
-                >
-                  <span className="fw-bold" style={{ fontSize: '1rem' }}>{preset.label}</span>
-                  {presetPrice > 0 ? (
-                    <small style={{ fontSize: '0.85rem' }}>Rp {presetPrice.toLocaleString('id-ID')}</small>
-                  ) : (
-                    <small className="text-muted">N/A</small>
-                  )}
-                </Button>
-              );
-            })}
-          </div>
-          <hr />
-          
-          <div className='sliders-container'>
-            <CustomRangeSlider
-              label={`Kelipatan 1 Kg (0 - 20 Kg)`}
-              value={kgValue}
-              min={0}
-              max={20}
-              step={1}
-              onChange={(e) => setKgValue(parseInt(e.target.value, 10))}
-              price={priceKg}
-              unit="kg"
-              iconType="kg"
-            />
-            <CustomRangeSlider
-              label={`Kelipatan 50 gr (0 - 950 gr)`}
-              value={gramValue}
-              min={0}
-              max={950}
-              step={50}
-              onChange={(e) => setGramValue(parseInt(e.target.value, 10))}
-              price={priceGram}
-              unit="gr"
-              iconType="gr"
-            />
-          </div>
-
-          <div className="modal-bottom-container">
-            <div className="added-items-container">
-              {cart.filter(item => item.comodity === selectedItemNm).map((item, index) => (
-                <div key={index} className="added-item-card">
-                  {item.totalWeight > 950 ? `${item.totalWeight / 1000} KG` : `${item.totalWeight} GR`}
-                  <div className="delete-item-icon" onClick={() => removeFromCart(item.comodity)}>
-                    &times;
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="total-summary-box">
-              <div className="total-summary-header">{selectedItemNm}</div>
-              <div className="total-summary-row">
-                <span className="total-summary-value">{displayWeight}</span>
-              </div>
-              <div className="total-summary-row price">
-                <span className="total-summary-value">
-                  {totalPrice.toLocaleString('id-ID')}
-                </span>
-              </div>
-            </div>
-          </div>
-
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={handleCloseModalCstmW}>Tutup</Button>
-          <Button variant="primary" onClick={() => handleAddToCartFromModal(selectedItemNm, selectedIdItem, totalWeight, totalPrice)}>
-            Tambahkan
-          </Button>
-        </Modal.Footer>
-      </Modal>
+      <CustomWeightModal
+        show={showModalCstmW}
+        onHide={handleCloseModalCstmW}
+        itemId={selectedIdItem}
+        itemName={selectedItemNm}
+      />
     </div>
   );
 }
-
-const CustomRangeSlider = ({ label, value, min, max, step, onChange, price, unit, iconType }) => {
-  const [tooltipActive, setTooltipActive] = useState(false);
-
-  const bars = useMemo(() => {
-    return Array.from({ length: 20 });
-  }, []);
-
-  const percentage = max > min ? ((value - min) * 100) / (max - min) : 0;
-
-  const handleInteraction = (e) => {
-    onChange(e);
-    setTooltipActive(true);
-  };
-  const handleMouseUp = () => setTooltipActive(false);
-
-  const renderIcon = () => {
-    if (iconType === 'kg') return <FaShoppingBag className="me-3" />;
-    if (iconType === 'gr') return <FaBalanceScale className="me-3" />;
-    return null;
-  };
-
-  return (
-    <div className="slider-group">
-      <div className="volume-bar-container">
-        {bars.map((_, index) => {
-          const barPercentage = (index / (bars.length - 1)) * 100;
-          const isActive = barPercentage <= percentage;
-          const height = 10 + barPercentage;
-          return (
-            <div
-              key={index}
-              className={`bar ${isActive ? 'active' : ''}`}
-              style={{ height: `${height}%` }}
-            ></div>
-          );
-        })}
-      </div>
-      <label>{renderIcon()}{label}</label>
-      <div className="custom-slider-container">
-        <div className="custom-slider-track-bg"></div>
-        <div className="custom-slider-track-volume" style={{ width: `${percentage}%` }}></div>
-        <input
-          type="range"
-          min={min}
-          max={max}
-          step={step}
-          value={value}
-          className="custom-slider-input"
-          onChange={handleInteraction}
-          onMouseUp={handleMouseUp}
-          onTouchEnd={handleMouseUp}
-        />
-        <div className={`slider-tooltip ${tooltipActive ? 'active' : ''}`} style={{ left: `${percentage}%` }}>
-          {value} {unit}
-          <span className="tooltip-price">Rp {price.toLocaleString('id-ID')}</span>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 export default Dashboard;
