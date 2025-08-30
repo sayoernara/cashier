@@ -1,232 +1,211 @@
-import React, { useCallback, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { getStorageData, getTransactionByCashier } from './apis/api';
-import { Alert, Col, Row, Spinner, Card, Button, Form, Table, Pagination } from 'react-bootstrap';
+import { Alert, Spinner, Form } from 'react-bootstrap';
 import dayjs from 'dayjs';
+import 'dayjs/locale/id';
+dayjs.locale('id');
 
-function Transaction() {
-    const [loadingTransaction, setLoadingTransaction] = useState(false);
-    const [errorTransaction, setErrorTransaction] = useState(null);
-    const [dataTransaction, setDataTransaction] = useState([]);
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
-    const [hasSearched, setHasSearched] = useState(false);
-    const [username] = useState(getStorageData().decryptrname);
+function useDebounce(value, delay) {
+    const [debouncedValue, setDebouncedValue] = useState(value);
+    useEffect(() => {
+        const handler = setTimeout(() => { setDebouncedValue(value); }, delay);
+        return () => { clearTimeout(handler); };
+    }, [value, delay]);
+    return debouncedValue;
+}
 
-    const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 5; 
+const viewStyles = {
+    wrapper: {
+        backgroundColor: '#ffffff',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+    },
+    header: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '20px 25px',
+        borderBottom: '1px solid #e2e8f0',
+        flexShrink: 0,
+    },
+    title: {
+        fontFamily: 'Poppins, sans-serif',
+        fontSize: '1.5em',
+        margin: 0,
+        fontWeight: 600
+    },
+    closeButton: {
+        background: 'none',
+        border: 'none',
+        fontSize: '1.8em',
+        cursor: 'pointer',
+        color: '#6b7280'
+    },
+    searchContainer: {
+        position: 'relative',
+        padding: '15px 25px',
+        flexShrink: 0,
+    },
+    searchInput: {
+        width: '100%', padding: '12px 20px 12px 45px', fontSize: '1em',
+        borderRadius: '10px', border: '1px solid #e2e8f0', boxSizing: 'border-box',
+        backgroundColor: '#f8faff', fontFamily: 'Poppins, sans-serif',
+    },
+    listHeader: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        padding: '10px 35px 10px 25px',
+        backgroundColor: '#f8faff',
+        color: '#718096',
+        fontSize: '0.9em',
+        fontWeight: '600',
+        borderBottom: '1px solid #e2e8f0',
+        flexShrink: 0,
+    },
+    listContainer: {
+        overflowY: 'auto',
+        flexGrow: 1,
+        padding: '0 25px'
+    },
+    transactionItem: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        padding: '20px 0',
+        borderBottom: '1px solid #f0f2f5',
+    },
+    infoContainer: { display: 'flex', flexDirection: 'column', gap: '4px' },
+    trxId: { fontWeight: '600', color: '#1a202c', fontSize: '1em' },
+    trxDate: { fontSize: '0.85em', color: '#718096' },
+    itemList: {
+        fontSize: '0.9em', color: '#4a5568', marginTop: '8px',
+        paddingLeft: '20px', listStyleType: 'circle', marginBottom: 0,
+    },
+    nominal: {
+        fontSize: '1em', fontWeight: '600', color: '#2d3748',
+        whiteSpace: 'nowrap', marginLeft: '16px',
+    },
+};
 
-    const fetchTransaction = useCallback(async () => {
-        if (!startDate || !endDate) {
-            setErrorTransaction({ message: 'Harap pilih tanggal mulai dan tanggal selesai.' });
+const CustomScrollbarStyles = () => (
+    <style>{`
+        .transaction-list-container::-webkit-scrollbar { width: 6px; }
+        .transaction-list-container::-webkit-scrollbar-track { background: transparent; }
+        .transaction-list-container::-webkit-scrollbar-thumb { background: #cbd5e0; border-radius: 10px; }
+        .transaction-list-container::-webkit-scrollbar-thumb:hover { background: #a0aec0; }
+    `}</style>
+);
+
+function Transaction({ onClose }) {
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [transactions, setTransactions] = useState([]);
+    const [username] = useState(getStorageData()?.decryptrname || '');
+    const [searchTerm, setSearchTerm] = useState('');
+    const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
+    useEffect(() => {
+        if (!username) {
+            setLoading(false);
+            setError({ message: 'User tidak ditemukan.' });
             return;
         }
-
-        try {
-            setLoadingTransaction(true);
-            setErrorTransaction(null);
-            setHasSearched(true);
-
-            const response = await getTransactionByCashier(startDate, endDate, username);
-
-            if (response && response.data && Array.isArray(response.data.translist)) {
-                setDataTransaction(response.data.translist);
-                setCurrentPage(1); 
-            } else {
-                setDataTransaction([]);
+        const fetchTransactions = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const startDate = dayjs().startOf('day').format('YYYY-MM-DD');
+                const endDate = dayjs().endOf('day').format('YYYY-MM-DD');
+                const response = await getTransactionByCashier(startDate, endDate, username);
+                if (response?.data?.translist && Array.isArray(response.data.translist)) {
+                    setTransactions(response.data.translist);
+                } else {
+                    setTransactions([]);
+                }
+            } catch (err) {
+                setError(err);
+                setTransactions([]);
+            } finally {
+                setLoading(false);
             }
-        } catch (error) {
-            setErrorTransaction(error);
-            setDataTransaction([]);
-        } finally {
-            setLoadingTransaction(false);
-        }
-    }, [startDate, endDate, username]);
+        };
+        fetchTransactions();
+    }, [username]);
 
-    // group by nomor
-    const groupByNomor = (transactions) => {
-        return transactions.reduce((acc, trx) => {
-            if (!acc[trx.nomor]) {
-                acc[trx.nomor] = [];
-            }
+    const groupedData = useMemo(() => {
+        const filtered = transactions.filter(trx =>
+            trx.item_nm.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+            trx.nomor.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+        );
+        return filtered.reduce((acc, trx) => {
+            if (!acc[trx.nomor]) { acc[trx.nomor] = []; }
             acc[trx.nomor].push(trx);
             return acc;
         }, {});
-    };
+    }, [transactions, debouncedSearchTerm]);
 
-    const groupedData = groupByNomor(dataTransaction);
     const nomorKeys = Object.keys(groupedData);
 
-    // pagination logic
-    const totalPages = Math.ceil(nomorKeys.length / itemsPerPage);
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    const paginatedNomorKeys = nomorKeys.slice(startIndex, endIndex);
-
-    // render content
     const renderContent = () => {
-        if (loadingTransaction) {
-            return (
-                <div className="text-center">
-                    <Spinner animation="border" role="status">
-                        <span className="visually-hidden">Loading...</span>
-                    </Spinner>
-                    <p>Memuat data transaksi...</p>
-                </div>
-            );
+        if (loading) {
+            return <div className="text-center my-5"><Spinner animation="border" /><p>Memuat data...</p></div>;
         }
-
-        if (errorTransaction) {
-            return <Alert variant="danger">Error: {errorTransaction.message || 'Gagal memuat data.'}</Alert>;
+        if (error) {
+            return <Alert variant="danger" className="m-4">Error: {error.message || 'Gagal memuat data.'}</Alert>;
         }
-        if (!hasSearched) {
-            return (
-                <Alert variant="info">
-                    Silakan pilih rentang tanggal dan klik 'Cari Transaksi' untuk melihat data.
-                </Alert>
-            );
+        if (nomorKeys.length === 0) {
+            return <Alert variant="info" className="m-4">{searchTerm ? "Tidak ada transaksi yang cocok." : "Belum ada transaksi hari ini."}</Alert>;
         }
-        if (hasSearched && dataTransaction.length === 0) {
-            return <Alert variant="warning">Tidak ada data transaksi pada rentang tanggal yang dipilih.</Alert>;
-        }
-
         return (
             <>
-                {paginatedNomorKeys.map((nomor) => {
-                    const group = groupedData[nomor];
-                    const totalNett = group.reduce((sum, item) => sum + Number(item.nettprice || 0), 0);
-
-                    return (
-                        <div key={nomor} className="mb-4">
-                            <h5 className="bg-light p-2 border">Transaksi: {nomor} | {dayjs(group[0].tanggal).format('DD/MM/YYYY HH:mm')}</h5>
-
-                            <Table striped bordered hover responsive>
-                                <thead>
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Cashier</th>
-                                        <th>Nama Barang</th>
-                                        <th>Berat Barang</th>
-                                        <th>Harga</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {group.map((trx, index) => (
-                                        <tr key={trx.id || `${nomor}-${index}`}>
-                                            <td>{index + 1}</td>
-                                            <td>{trx.cashier}</td>
-                                            <td>{trx.item_nm}</td>
-                                            <td>{trx.weight_kg} kg</td>
-                                            <td>Rp {trx.nettprice}</td>
-                                        </tr>
-                                    ))}
-                                    <tr className="table-secondary fw-bold">
-                                        <td colSpan={4} className="text-end">Total Nett</td>
-                                        <td>Rp {totalNett}</td>
-                                    </tr>
-                                </tbody>
-                            </Table>
-                        </div>
-                    );
-                })}
-
-                <div className="d-flex justify-content-center">
-                    <Pagination>
-                        <Pagination.First onClick={() => setCurrentPage(1)} disabled={currentPage === 1} />
-                        <Pagination.Prev onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))} disabled={currentPage === 1} />
-
-                        {(() => {
-                            let items = [];
-
-                            for (let i = 1; i <= totalPages; i++) {
-                                if (
-                                    i === 1 ||
-                                    i === 2 ||
-                                    i === totalPages ||
-                                    i === totalPages - 1 ||
-                                    (i >= currentPage - 1 && i <= currentPage + 1)
-                                ) {
-                                    items.push(
-                                        <Pagination.Item
-                                            key={i}
-                                            active={i === currentPage}
-                                            onClick={() => setCurrentPage(i)}
-                                        >
-                                            {i}
-                                        </Pagination.Item>
-                                    );
-                                } else if (
-                                    i === 3 && currentPage > 4
-                                ) {
-                                    items.push(<Pagination.Ellipsis key="start-ellipsis" disabled />);
-                                } else if (
-                                    i === totalPages - 2 && currentPage < totalPages - 3
-                                ) {
-                                    items.push(<Pagination.Ellipsis key="end-ellipsis" disabled />);
-                                }
-                            }
-
-                            return items;
-                        })()}
-
-                        <Pagination.Next onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages} />
-                        <Pagination.Last onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages} />
-                    </Pagination>
+                <div style={viewStyles.listHeader}>
+                    <span>ID Transaksi & Item</span>
+                    <span>Nominal</span>
                 </div>
-
+                <div style={viewStyles.listContainer} className="transaction-list-container">
+                    {nomorKeys.map((nomor) => {
+                        const group = groupedData[nomor];
+                        const totalNett = group.reduce((sum, item) => sum + Number(item.nettprice || 0), 0);
+                        return (
+                            <div key={nomor} style={viewStyles.transactionItem}>
+                                <div style={viewStyles.infoContainer}>
+                                    <div style={viewStyles.trxId}>{nomor}</div>
+                                    <div style={viewStyles.trxDate}>{dayjs(group[0].tanggal).format('DD MMMM YYYY, HH:mm')}</div>
+                                    <ul style={viewStyles.itemList}>
+                                        {group.map((item, index) => (
+                                            <li key={index}>{item.item_nm} ({item.weight_kg ? `${item.weight_kg} kg` : '-'})</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                                <div style={viewStyles.nominal}>
+                                    Rp {new Intl.NumberFormat('id-ID').format(totalNett)}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
             </>
         );
     };
 
     return (
-        <div className="container py-4">
-            <h2 className="mb-4">Riwayat Transaksi</h2>
-
-            <Card className="mb-4 shadow-sm">
-                <Card.Header as="h5">Filter Pencarian</Card.Header>
-                <Card.Body>
-                    <Form>
-                        <Row className="align-items-end g-3">
-                            <Col md={4}>
-                                <Form.Group controlId="formStartDate">
-                                    <Form.Label><strong>Tanggal Mulai</strong></Form.Label>
-                                    <Form.Control
-                                        type="date"
-                                        value={startDate}
-                                        onChange={(e) => setStartDate(e.target.value)}
-                                    />
-                                </Form.Group>
-                            </Col>
-                            <Col md={4}>
-                                <Form.Group controlId="formEndDate">
-                                    <Form.Label><strong>Tanggal Selesai</strong></Form.Label>
-                                    <Form.Control
-                                        type="date"
-                                        value={endDate}
-                                        onChange={(e) => setEndDate(e.target.value)}
-                                    />
-                                </Form.Group>
-                            </Col>
-                            <Col md={4}>
-                                <Button
-                                    variant="primary"
-                                    className="w-100"
-                                    onClick={fetchTransaction}
-                                    disabled={loadingTransaction || !startDate || !endDate}
-                                >
-                                    {loadingTransaction ? 'Mencari...' : 'Cari Transaksi'}
-                                </Button>
-                            </Col>
-                        </Row>
-                    </Form>
-                </Card.Body>
-            </Card>
-
-            <Card className="shadow-sm">
-                <Card.Header as="h5">Hasil Transaksi</Card.Header>
-                <Card.Body>
-                    {renderContent()}
-                </Card.Body>
-            </Card>
+        <div style={viewStyles.wrapper}>
+            <CustomScrollbarStyles />
+            <div style={viewStyles.header}>
+                <h2 style={viewStyles.title}>Riwayat Transaksi Hari Ini</h2>
+                <button style={viewStyles.closeButton} onClick={onClose}>&times;</button>
+            </div>
+            <div style={viewStyles.searchContainer}>
+                <Form.Control
+                    type="text"
+                    placeholder="Cari berdasarkan Nama Barang atau Nomor Transaksi..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    style={viewStyles.searchInput}
+                />
+            </div>
+            {renderContent()}
         </div>
     );
 }

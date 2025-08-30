@@ -1,22 +1,20 @@
 body {
-  overflow-y: scroll; /* tetap bisa scroll */
-  scrollbar-width: none; /* Firefox */
+  overflow-y: scroll;
+  scrollbar-width: none;
 }
 
-/* Chrome, Edge, Safari */
 body::-webkit-scrollbar {
   display: none;
 }
 
-
-/* Scrollbar modern untuk daftar barang */
 .goods-list {
-  max-height: 400px; /* atau sesuai kebutuhan */
+  max-height: 400px;
   overflow-y: auto;
   padding-right: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: #a0aec0 transparent;
 }
 
-/* untuk Chrome, Edge, Safari */
 .goods-list::-webkit-scrollbar {
   width: 6px;
 }
@@ -26,29 +24,22 @@ body::-webkit-scrollbar {
 }
 
 .goods-list::-webkit-scrollbar-thumb {
-  background: #a0aec0;   /* abu tipis */
+  background: #a0aec0;
   border-radius: 10px;
 }
 
 .goods-list::-webkit-scrollbar-thumb:hover {
-  background: #718096;   /* lebih gelap saat hover */
+  background: #718096;
 }
 
-/* untuk Firefox */
-.goods-list {
+.cartitemlist {
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 8px;
   scrollbar-width: thin;
   scrollbar-color: #a0aec0 transparent;
 }
 
-
-/* Scrollbar modern untuk daftar cartlist */
-.cartitemlist {
-  max-height: 400px; /* atau sesuai kebutuhan */
-  overflow-y: auto;
-  padding-right: 8px;
-}
-
-/* untuk Chrome, Edge, Safari */
 .cartitemlist::-webkit-scrollbar {
   width: 6px;
 }
@@ -58,26 +49,20 @@ body::-webkit-scrollbar {
 }
 
 .cartitemlist::-webkit-scrollbar-thumb {
-  background: #a0aec0;   /* abu tipis */
+  background: #a0aec0;
   border-radius: 10px;
 }
 
 .cartitemlist::-webkit-scrollbar-thumb:hover {
-  background: #718096;   /* lebih gelap saat hover */
-}
-
-/* untuk Firefox */
-.cartitemlist {
-  scrollbar-width: thin;
-  scrollbar-color: #a0aec0 transparent;
+  background: #718096;
 }
 
 .itemimgcenter {
   display: block;
   margin-left: auto;
   margin-right: auto;
-  width: auto; 
-  height: 150px; 
-  object-fit: cover; 
-  border-radius: 8px; 
+  width: auto;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 8px;
 }
