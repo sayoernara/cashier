@@ -1,94 +1,24 @@
-import React, { useCallback, useState, useContext, useMemo } from 'react';
-import { getGoodsPricePerGram } from './apis/api';
+import React, { useCallback, useState, useContext, useMemo, useEffect } from 'react';
+import { getGoodsPricePerGram, getStorageData } from './apis/api';
 import { Alert, Col, Row, Spinner, Card, Button, Modal, Form, InputGroup, ListGroup, Table } from 'react-bootstrap';
 import { BiCart, BiPlus, BiTransfer } from 'react-icons/bi';
 import { CiImageOff } from 'react-icons/ci';
 import { GoodsContext } from './components/GoodsContext';
 import { FaShoppingBag, FaBalanceScale } from 'react-icons/fa';
 import './Dashboard.css';
-import Swal from 'sweetalert2';
-
-// --- FUNGSI HELPER UNTUK CETAK (TIDAK BERUBAH) ---
-const printReceipt = async (receiptData) => {
-    try {
-        const { items, tradeInItems, summary, transactionNumber } = receiptData;
-        const line = '--------------------------------\n';
-        let receiptText = '';
-        receiptText += '           Sayoernara\n';
-        receiptText += `No: ${transactionNumber}\n`;
-        receiptText += `Tgl: ${new Date().toLocaleString('id-ID')}\n`;
-        receiptText += line;
-
-        items.forEach(item => {
-            const priceAfterDiscount = item.totalPrice - (item.discount || 0);
-            const itemName = `${item.comodity} (${item.totalWeight} gr)`;
-            const itemPrice = `Rp ${priceAfterDiscount.toLocaleString('id-ID')}`;
-            const receiptWidth = 32;
-            const spaces = receiptWidth - itemName.length - itemPrice.length;
-            receiptText += `${itemName}${' '.repeat(Math.max(0, spaces))}${itemPrice}\n`;
-        });
-
-        if (tradeInItems && tradeInItems.length > 0) {
-            receiptText += line;
-            receiptText += '       TUKAR TAMBAH\n';
-            receiptText += line;
-            tradeInItems.forEach(item => {
-                const itemName = `${item.comodity} (${item.totalWeight} gr)`;
-                const itemPrice = `-Rp ${item.totalPrice.toLocaleString('id-ID')}`;
-                const receiptWidth = 32;
-                const spaces = receiptWidth - itemName.length - itemPrice.length;
-                receiptText += `${itemName}${' '.repeat(Math.max(0, spaces))}${itemPrice}\n`;
-            });
-        }
-
-        receiptText += line;
-
-        const formatSummaryLine = (label, value) => {
-            const receiptWidth = 32;
-            const formattedValue = `Rp ${value.toLocaleString('id-ID')}`;
-            const spaces = receiptWidth - label.length - formattedValue.length;
-            return `${label}${' '.repeat(Math.max(0, spaces))}${formattedValue}\n`;
-        }
-
-        receiptText += formatSummaryLine('Subtotal', summary.subtotal);
-        if (summary.totalDiscount > 0) {
-            receiptText += formatSummaryLine('Diskon', -summary.totalDiscount);
-        }
-        if (summary.tradeInTotal > 0) {
-            receiptText += formatSummaryLine('Tukar Tambah', -summary.tradeInTotal);
-        }
-        receiptText += formatSummaryLine('Grand Total', summary.grandTotal);
-        receiptText += line;
-        receiptText += formatSummaryLine('Bayar', summary.paymentAmount);
-        receiptText += formatSummaryLine('Kembali', summary.change);
-        receiptText += '\nTerima Kasih!\n\n';
-        const cutCommand = '\x1D\x56\x42\x00';
-        receiptText += cutCommand;
-
-        const base64String = btoa(receiptText);
-        window.location.href = `rawbt:base64,${base64String}`;
-    } catch (error) {
-        console.error("Gagal mencetak struk:", error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Gagal Mencetak',
-            text: 'Pastikan aplikasi RawBT sudah terinstall.',
-        });
-    }
-};
-
 
 function Retur() {
     const {
         groupedGoods, selectedLetter, loadingGoods, errorLoadingGoods,
-        currentCustomer, setCurrentCustomer,
-        cart, addToCart, removeFromCart,
+        tradeInCurrentCustomer, setTradeInCurrentCustomer,
+        tradeInCart, addToTradeInCart, removeFromTradeInCart,
         showModal, handleShowModal, handleCloseModal,
         resultCountPrice, loadingCountPrice, errorCountPrice,
         discounts, setDiscounts,
         paymentAmount, setPaymentAmount,
         fetchTransaction, loadingSaveTransaction
     } = useContext(GoodsContext);
+    const [returSellCart, setReturSellCart] = useState([]);
 
     const [showModalCstmW, setShowModalCstmW] = useState(false);
     const [selectedIdItem, setSelectedIdItem] = useState('');
@@ -98,12 +28,57 @@ function Retur() {
     const [goodsPrice, setGoodsPrice] = useState([]);
     const [kgValue, setKgValue] = useState(0);
     const [gramValue, setGramValue] = useState(0);
-    const [tradeInCart, setTradeInCart] = useState([]);
-
-    // --- PERUBAHAN ---: State untuk menentukan mode modal (jual atau tukarTambah)
     const [modalMode, setModalMode] = useState('jual');
-
     const DISCOUNT_STEP = 500;
+
+    useEffect(() => {
+        const cartKey = `retur_sell_${tradeInCurrentCustomer}`;
+        const savedCart = JSON.parse(localStorage.getItem(cartKey) || '[]');
+        setReturSellCart(savedCart);
+    }, [tradeInCurrentCustomer]);
+
+    const addToReturSellCart = (comodity, id_item, weight, price) => {
+        setReturSellCart((prevCart) => {
+            const numWeight = parseInt(weight, 10);
+            const numPrice = parseInt(price, 10);
+
+            const existingItemIndex = prevCart.findIndex(
+                (item) => item.comodity === comodity && item.id_item === id_item
+            );
+
+            let updatedCart;
+            if (existingItemIndex > -1) {
+                updatedCart = prevCart.map((item, index) =>
+                    index === existingItemIndex ?
+                        { ...item, totalWeight: item.totalWeight + numWeight, totalPrice: item.totalPrice + numPrice } :
+                        item
+                );
+            } else {
+                updatedCart = [...prevCart, {
+                    comodity,
+                    id_item,
+                    totalWeight: numWeight,
+                    totalPrice: numPrice,
+                    type: 'PENJUALAN'
+                }];
+            }
+
+            const cartKey = `retur_sell_${tradeInCurrentCustomer}`;
+            localStorage.setItem(cartKey, JSON.stringify(updatedCart));
+            return updatedCart;
+        });
+    };
+
+    const removeFromReturSellCart = (comodityToRemove) => {
+        const updatedCart = returSellCart.filter((item) => item.comodity !== comodityToRemove);
+        setReturSellCart(updatedCart);
+        const cartKey = `retur_sell_${tradeInCurrentCustomer}`;
+        localStorage.setItem(cartKey, JSON.stringify(updatedCart));
+    };
+
+    const handleRemoveTradeIn = (index) => {
+        removeFromTradeInCart(index);
+    };
 
     const handleCloseModalCstmW = () => {
         setSelectedIdItem('');
@@ -114,9 +89,8 @@ function Retur() {
         setGramValue(0);
     };
 
-    // --- PERUBAHAN ---: Fungsi ini sekarang menangani kedua mode
     const handleShowCustomModal = (id, itemnm, mode) => {
-        setModalMode(mode); // Set mode saat tombol diklik
+        setModalMode(mode);
         setSelectedIdItem(id);
         setSelectedItemNm(itemnm);
         setShowModalCstmW(true);
@@ -134,24 +108,36 @@ function Retur() {
             setLoadingGoodsPrice(false);
         }
     }, []);
-    
-    const handleRemoveTradeIn = (index) => {
-        setTradeInCart(prev => prev.filter((_, i) => i !== index));
-    };
 
     const filteredComodities = Object.keys(groupedGoods).filter((comodity) => {
         if (!selectedLetter) return true;
         return comodity.toUpperCase().startsWith(selectedLetter);
     });
 
-    const handleNextCustomer = () => setCurrentCustomer((prev) => prev + 1);
-    const handlePrevCustomer = () => { if (currentCustomer > 0) setCurrentCustomer((prev) => prev - 1); };
+    const handleNextCustomer = () => setTradeInCurrentCustomer((prev) => prev + 1);
+    const handlePrevCustomer = () => { if (tradeInCurrentCustomer > 0) setTradeInCurrentCustomer((prev) => prev - 1); };
 
-    const subtotal = resultCountPrice.reduce((sum, item) => sum + item.totalPrice, 0);
-    const totalDiscount = discounts.reduce((sum, discount) => sum + (discount || 0), 0);
-    const tradeInTotal = tradeInCart.reduce((sum, item) => sum + item.totalPrice, 0);
-    const grandTotal = subtotal - totalDiscount - tradeInTotal;
+    const subtotal = resultCountPrice
+  .filter(item => item.source === "penjualan")
+  .reduce((sum, item) => sum + item.totalPrice, 0);
+
+const totalDiscount = resultCountPrice
+  .filter(item => item.source === "penjualan")
+  .reduce((sum, item, idx) => sum + (discounts[idx] || 0), 0);
+
+const tradeInTotal = resultCountPrice
+  .filter(item => item.source === "retur")
+  .reduce((sum, item) => sum + item.totalPrice, 0);
+
+const grandTotal = subtotal - totalDiscount - tradeInTotal;
+
     const change = parseInt(paymentAmount || 0, 10) - grandTotal;
+
+    useEffect(() => {
+        if (grandTotal <= 0) {
+            setPaymentAmount('0');
+        }
+    }, [grandTotal, setPaymentAmount]);
 
     const handleConfirmTransaction = async () => {
         const summaryData = {
@@ -159,23 +145,8 @@ function Retur() {
             paymentAmount: parseInt(paymentAmount, 10),
             change,
         };
-        try {
-            const response = await fetchTransaction(summaryData);
-            if (response && response.success) {
-                const receiptData = {
-                    items: resultCountPrice.map((item, index) => ({
-                        ...item, discount: discounts[index] || 0,
-                    })),
-                    tradeInItems: tradeInCart, summary: summaryData, transactionNumber: response.number,
-                };
-                await printReceipt(receiptData);
-            } else {
-                Swal.fire('Transaksi Gagal', response.message || 'Gagal menyimpan transaksi.', 'error');
-            }
-        } catch (error) {
-            console.error("Error saat menyimpan transaksi:", error);
-            Swal.fire('Koneksi Gagal', 'Tidak dapat menyimpan transaksi ke server.', 'error');
-        }
+        //console.log("Summary Transaksi:", summaryData);
+        fetchdummy(summaryData)
     };
 
     const getPrice = (weight) => {
@@ -198,18 +169,19 @@ function Retur() {
     const totalWeight = kgInGram + gramValue;
     const totalPrice = priceKg + priceGram;
 
-    // --- PERUBAHAN ---: Satu fungsi untuk menangani konfirmasi dari modal
     const handleConfirmFromCustomModal = () => {
         if (totalWeight > 0 && totalPrice > 0) {
             if (modalMode === 'jual') {
-                addToCart(selectedItemNm, selectedIdItem, totalWeight, totalPrice);
-            } else { // Mode 'tukarTambah'
+                addToReturSellCart(selectedItemNm, selectedIdItem, totalWeight, totalPrice);
+            } else {
                 const tradeInItem = {
+                    id_item: selectedIdItem,
                     comodity: selectedItemNm,
                     totalWeight,
                     totalPrice,
+                    type: 'PENGEMBALIAN'
                 };
-                setTradeInCart(prev => [...prev, tradeInItem]);
+                addToTradeInCart(tradeInItem);
             }
         }
         handleCloseModalCstmW();
@@ -218,9 +190,13 @@ function Retur() {
     const handleDiscountChange = (index, operation, itemPrice) => {
         const newDiscounts = [...discounts];
         const currentDiscount = parseInt(newDiscounts[index] || 0, 10);
+        const price = parseInt(itemPrice, 10);
         let newValue = currentDiscount;
-        if (operation === 'increase') newValue = Math.min(currentDiscount + DISCOUNT_STEP, parseInt(itemPrice, 10));
-        else if (operation === 'decrease') newValue = Math.max(currentDiscount - DISCOUNT_STEP, 0);
+        if (operation === 'increase') {
+            newValue = Math.min(currentDiscount + DISCOUNT_STEP, price);
+        } else if (operation === 'decrease') {
+            newValue = Math.max(currentDiscount - DISCOUNT_STEP, 0);
+        }
         newDiscounts[index] = newValue;
         setDiscounts(newDiscounts);
     };
@@ -239,14 +215,90 @@ function Retur() {
     const handlePresetClick = (weight, price) => {
         if (weight > 0 && price > 0) {
             if (modalMode === 'jual') {
-                addToCart(selectedItemNm, selectedIdItem, weight, price);
+                // Tambahkan ke keranjang penjualan retur (terpisah)
+                addToReturSellCart(selectedItemNm, selectedIdItem, weight, price);
             } else {
-                const tradeInItem = { comodity: selectedItemNm, totalWeight: weight, totalPrice: price };
-                setTradeInCart(prev => [...prev, tradeInItem]);
+                // Tambahkan ke keranjang tukar tambah dengan keterangan
+                const tradeInItem = {
+                    id_item: selectedIdItem,
+                    comodity: selectedItemNm,
+                    totalWeight: weight,
+                    totalPrice: price,
+                    type: 'PENGEMBALIAN' // Keterangan untuk pengembalian
+                };
+                addToTradeInCart(tradeInItem);
             }
         }
         handleCloseModalCstmW();
     };
+
+    const mergedResult = resultCountPrice.map((item) => {
+        // Cari apakah ada item tukar tambah dengan comodity sama
+        const tradeInItem = tradeInCart.find(t => t.comodity === item.comodity);
+
+        if (tradeInItem) {
+            return {
+                ...item,
+                returDiscount: tradeInItem.totalPrice,   // simpan diskon dari retur
+                disableDiscountEdit: true                // matikan tombol +/- diskon
+            };
+        }
+
+        return item;
+    });
+
+const fetchdummy = async (summaryData) => {
+  // Gabungkan penjualan + tukar tambah
+  const allItems = [
+    ...returSellCart.map((item, index) => ({
+      comodity: item.comodity,
+      id_item: item.id_item,
+      totalWeight: item.totalWeight,
+      originalPrice: item.totalPrice,
+      discount: discounts[index] || 0, // diskon manual hanya untuk penjualan
+      finalPrice: item.totalPrice - (discounts[index] || 0),
+      type: item.type || "PENJUALAN",
+    })),
+    ...tradeInCart.map((item) => ({
+      comodity: item.comodity,
+      id_item: item.id_item,
+      totalWeight: item.totalWeight,
+      originalPrice: item.totalPrice,
+      discount: item.totalPrice, // untuk retur, dianggap diskon penuh
+      finalPrice: 0, // karena retur nilainya mengurangi total
+      type: item.type || "PENGEMBALIAN",
+    })),
+  ];
+
+  // Gabungkan item dengan id_item + comodity yang sama
+  const mergedItems = Object.values(
+    allItems.reduce((acc, item) => {
+      const key = `${item.id_item}-${item.comodity}`;
+      if (!acc[key]) {
+        acc[key] = { ...item };
+      } else {
+        acc[key].totalWeight += item.totalWeight;
+        acc[key].originalPrice += item.originalPrice;
+        acc[key].discount += item.discount;
+        acc[key].finalPrice += item.finalPrice;
+      }
+      return acc;
+    }, {})
+  );
+
+  const transactionPayload = {
+    customerIndex: tradeInCurrentCustomer,
+    items: mergedItems,
+    summary: summaryData,
+    location: getStorageData().decryptidloc,
+    cashier: getStorageData().decryptuname,
+    transactionDate: new Date().toISOString(),
+  };
+
+  console.log("Payload Transaksi:", transactionPayload);
+};
+
+
 
     return (
         <div className="container py-4">
@@ -273,8 +325,7 @@ function Retur() {
                                                         <CiImageOff size={150} className="text-secondary" style={{ display: 'block', margin: '0 auto', width: '45%', height: 'auto' }} />
                                                     )}
                                                     <Card.Title className="fs-6 fw-bold text-center mt-2">{comodity}</Card.Title>
-                                                    
-                                                    {/* --- PERUBAHAN ---: Tombol aksi memanggil fungsi handleShowCustomModal dengan mode yang sesuai */}
+
                                                     <div className="d-grid gap-2 mt-3">
                                                         <Button variant="primary" onClick={() => handleShowCustomModal(representativeItem.id_item, comodity, 'jual')}>
                                                             <BiPlus /> Jual
@@ -294,22 +345,27 @@ function Retur() {
                 </Col>
 
                 <Col md={3} style={{ flex: "0 0 30%" }}>
-                    <h4 className="mt-4"><BiCart /> Keranjang Customer #{currentCustomer + 1}</h4>
+                    <h4 className="mt-4"><BiCart /> Keranjang Customer #{tradeInCurrentCustomer + 1}</h4>
                     <div style={{ backgroundColor: '#f8f9fa', borderRadius: '5px', height: "calc(100vh - 250px)", display: "flex", flexDirection: "column" }}>
-                        {(cart.length === 0 && tradeInCart.length === 0) ? (
+                        {(returSellCart.length === 0 && tradeInCart.length === 0) ? (
                             <p className="text-muted small fst-italic m-2">Belum ada item</p>
                         ) : (
                             <div style={{ flex: 1, overflowY: "auto" }}>
-                                {cart.length > 0 && (
+                                {returSellCart.length > 0 && (
                                     <div className='cartitemlist p-2'>
-                                        <h6>Barang Dibeli</h6>
+                                        <h6>Barang Dibeli (PENJUALAN)</h6>
                                         <ul className="list-group small shadow-sm rounded">
-                                            {[...cart].reverse().map((item, idx) => (
+                                            {[...returSellCart].reverse().map((item, idx) => (
                                                 <li key={`${item.comodity}-${idx}`} className="list-group-item d-flex justify-content-between align-items-center">
-                                                    <div><strong>{item.comodity}</strong><div className="text-muted">Total: {item.totalWeight} gr</div></div>
-                                                    <Button variant="outline-danger" size="sm" onClick={() => removeFromCart(item.comodity)}>Hapus</Button>
+                                                    <div>
+                                                        <strong>{item.comodity}</strong>
+                                                        <div className="text-muted">Total: {item.totalWeight} gr</div>
+                                                        <div className="text-primary small fw-bold">{item.type}</div>
+                                                    </div>
+                                                    <Button variant="outline-danger" size="sm" onClick={() => removeFromReturSellCart(item.comodity)}>Hapus</Button>
                                                 </li>
                                             ))}
+
                                         </ul>
                                     </div>
                                 )}
@@ -330,8 +386,8 @@ function Retur() {
                         )}
                     </div>
                     <div className="d-flex gap-2 mt-3">
-                        <Button variant="secondary" size="sm" onClick={handlePrevCustomer} disabled={currentCustomer === 0}>&laquo; Prev</Button>
-                        <Button variant="primary" size="sm" onClick={handleNextCustomer} disabled={currentCustomer >= 4}>Next Customer &raquo;</Button>
+                        <Button variant="secondary" size="sm" onClick={handlePrevCustomer} disabled={tradeInCurrentCustomer === 0}>&laquo; Prev</Button>
+                        <Button variant="primary" size="sm" onClick={handleNextCustomer} disabled={tradeInCurrentCustomer >= 4}>Next Customer &raquo;</Button>
                     </div>
                 </Col>
             </Row>
@@ -339,19 +395,78 @@ function Retur() {
             <Modal show={showModal} onHide={handleCloseModal} centered size="lg">
                 <Modal.Header closeButton><Modal.Title>Konfirmasi Transaksi</Modal.Title></Modal.Header>
                 <Modal.Body>
-                    <p>Rincian belanja untuk <strong>Customer #{currentCustomer + 1}</strong>:</p>
+                    <p>Rincian belanja untuk <strong>Customer #{tradeInCurrentCustomer + 1}</strong>:</p>
                     {loadingCountPrice ? (<div className="d-flex justify-content-center p-5"><Spinner animation="border" variant="primary" /></div>) : errorCountPrice ? (<Alert variant="danger">{errorCountPrice}</Alert>) : (
                         <Table responsive>
-                            <thead><tr className="table-light"><th>Produk</th><th className="text-center">Diskon (Rp)</th><th className="text-end">Harga Akhir</th></tr></thead>
+                            <thead>
+                                <tr className="table-light">
+                                    <th>Produk</th>
+                                    <th className="text-center">Diskon (Rp)</th>
+                                    <th className="text-end">Harga Akhir</th>
+                                </tr>
+                            </thead>
                             <tbody>
-                                {resultCountPrice.map((item, idx) => {
-                                    const currentDiscount = discounts[idx] || 0;
-                                    const priceAfterDiscount = item.totalPrice - currentDiscount;
-                                    return (<tr key={idx} className="align-middle"><td><strong>{item.comodity}</strong><div className="text-muted small">{item.totalWeight} gr</div></td><td className="text-center"><InputGroup style={{ minWidth: '150px', margin: 'auto' }}><Button variant="outline-danger" onClick={() => handleDiscountChange(idx, 'decrease')} disabled={currentDiscount === 0}> - </Button><Form.Control className="text-center fw-bold" value={currentDiscount.toLocaleString('id-ID')} readOnly /><Button variant="outline-success" onClick={() => handleDiscountChange(idx, 'increase', item.totalPrice)} disabled={currentDiscount >= item.totalPrice}> + </Button></InputGroup></td><td className="text-end"><span className="fw-bold fs-6"> Rp {priceAfterDiscount.toLocaleString('id-ID')} </span>{currentDiscount > 0 && (<div className="text-muted small text-decoration-line-through"> Rp {item.totalPrice.toLocaleString('id-ID')} </div>)}</td></tr>);
+                                {mergedResult.map((item, idx) => {
+                                    const manualDiscount = discounts[idx] || 0;
+                                    const returDiscount = item.returDiscount || 0;
+                                    const totalDiscount = manualDiscount + returDiscount;
+                                    const priceAfterDiscount = item.totalPrice - totalDiscount;
+
+                                    return (
+                                        <tr key={idx} className="align-middle">
+                                            <td>
+                                              <strong>{item.comodity}</strong>
+                                              <div className="text-muted small">{item.totalWeight} gr</div>
+                                              <div className="small fst-italic">
+                                                {item.source === "penjualan" ? "Penjualan" : "Tukar Tambah"}
+                                              </div>
+                                            </td>
+
+                                            <td className="text-center">
+                                                {item.disableDiscountEdit ? (
+                                                    // kalau dari retur → tampilkan fix discount, tanpa tombol
+                                                    <span className="fw-bold text-danger">
+                                                        Rp {returDiscount.toLocaleString('id-ID')}
+                                                    </span>
+                                                ) : (
+                                                    <InputGroup style={{ minWidth: '150px', margin: 'auto' }}>
+                                                        <Button
+                                                            variant="outline-danger"
+                                                            onClick={() => handleDiscountChange(idx, 'decrease')}
+                                                            disabled={manualDiscount === 0}
+                                                        >
+                                                            -
+                                                        </Button>
+                                                        <Form.Control
+                                                            className="text-center fw-bold"
+                                                            value={manualDiscount.toLocaleString('id-ID')}
+                                                            readOnly
+                                                        />
+                                                        <Button
+                                                            variant="outline-success"
+                                                            onClick={() => handleDiscountChange(idx, 'increase', item.totalPrice)}
+                                                            disabled={manualDiscount >= item.totalPrice}
+                                                        >
+                                                            +
+                                                        </Button>
+                                                    </InputGroup>
+                                                )}
+                                            </td>
+
+                                            <td className="text-end">
+                                                <span className="fw-bold fs-6">
+                                                    Rp {priceAfterDiscount.toLocaleString('id-ID')}
+                                                </span>
+                                                {totalDiscount > 0 && (
+                                                    <div className="text-muted small text-decoration-line-through">
+                                                        Rp {item.totalPrice.toLocaleString('id-ID')}
+                                                    </div>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    );
                                 })}
-                                {tradeInCart.map((item, idx) => (
-                                    <tr key={`tradein-summary-${idx}`} className="align-middle table-success"><td><strong>{item.comodity} (Tukar Tambah)</strong><div className="text-muted small">{item.totalWeight} gr</div></td><td className="text-center">-</td><td className="text-end"><span className="fw-bold fs-6">-Rp {item.totalPrice.toLocaleString('id-ID')}</span></td></tr>
-                                ))}
+
                             </tbody>
                         </Table>
                     )}
@@ -364,9 +479,25 @@ function Retur() {
                     </ListGroup>
                     <Form.Group className="my-3">
                         <Form.Label className="fw-bold">Nominal Bayar</Form.Label>
-                        <InputGroup><InputGroup.Text>Rp</InputGroup.Text><Form.Control type="text" value={paymentAmount ? parseInt(paymentAmount, 10).toLocaleString('id-ID') : ""} onChange={handlePaymentChange} placeholder="Masukkan jumlah uang pembayaran" size="lg" autoFocus /></InputGroup>
+                        <InputGroup>
+                            <InputGroup.Text>Rp</InputGroup.Text>
+                            <Form.Control
+                                type="text"
+                                value={paymentAmount ? parseInt(paymentAmount, 10).toLocaleString('id-ID') : ""}
+                                onChange={handlePaymentChange}
+                                placeholder={grandTotal > 0 ? "Masukkan jumlah uang pembayaran" : "Tidak perlu pembayaran"}
+                                size="lg"
+                                autoFocus
+                                readOnly={grandTotal <= 0}
+                            />
+                        </InputGroup>
                     </Form.Group>
-                    {paymentAmount && change >= 0 && (<div className="alert alert-success d-flex justify-content-between align-items-center fw-bolder fs-5"><span>Kembalian</span><span>Rp {change.toLocaleString()}</span></div>)}
+                    {paymentAmount && change > 0 && (
+                        <div className="alert alert-success d-flex justify-content-between align-items-center fw-bolder fs-5">
+                            <span>Kembalian</span>
+                            <span>Rp {change.toLocaleString()}</span>
+                        </div>
+                    )}
                 </Modal.Body>
                 <Modal.Footer>
                     <Button variant="secondary" onClick={handleCloseModal}>Tutup</Button>

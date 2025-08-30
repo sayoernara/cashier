@@ -16,14 +16,18 @@ function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // State yang diangkat dari Dashboard.jsx
   const [goodsList, setGoodsList] = useState([]);
   const [loadingGoods, setLoadingGoods] = useState(false);
   const [errorLoadingGoods, setErrorLoadingGoods] = useState(null);
   const [selectedLetter, setSelectedLetter] = useState(null);
 
+  // State untuk customer di halaman Regular (Dashboard)
   const [currentCustomer, setCurrentCustomer] = useState(0);
+  // State untuk customer di halaman Tukar Tambah (Retur)
+  const [tradeInCurrentCustomer, setTradeInCurrentCustomer] = useState(0);
+
   const [cart, setCart] = useState([]);
+  const [tradeInCart, setTradeInCart] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [resultCountPrice, setResultCounPrice] = useState([]);
   const [loadingCountPrice, setLoadingCountPrice] = useState(false);
@@ -33,6 +37,7 @@ function MainLayout() {
   const [loadingSaveTransaction, setLoadingSaveTransaction] = useState(false);
   const [errorSaveTransaction, setErrorSaveTransaction] = useState(null);
 
+  // --- LOGIKA KERANJANG BIASA (JUAL) ---
   const getCartFromStorage = (customerIndex) => {
     const carts = JSON.parse(localStorage.getItem("carts") || "{}");
     return carts[customerIndex] || [];
@@ -49,7 +54,6 @@ function MainLayout() {
   }, [currentCustomer]);
 
 
-  // Fungsi yang diangkat dari Dashboard.jsx
   const addToCart = (comodity, id_item, weight, price) => {
     setCart((prevCart) => {
       const numWeight = parseInt(weight, 10);
@@ -81,12 +85,56 @@ function MainLayout() {
     saveCartToStorage(currentCustomer, updatedCart);
   };
 
-  const fetchCountPrice = useCallback(async () => {
+  const getTradeInCartFromStorage = (customerIndex) => {
+    try {
+      const allCarts = JSON.parse(localStorage.getItem("tradeInCarts") || "{}");
+      return allCarts[customerIndex] || [];
+    } catch (error) {
+      console.error("Gagal mengambil keranjang tukar tambah:", error);
+      return [];
+    }
+  };
+
+  const saveTradeInCartToStorage = (customerIndex, cartData) => {
+    try {
+      const allCarts = JSON.parse(localStorage.getItem("tradeInCarts") || "{}");
+      allCarts[customerIndex] = cartData;
+      localStorage.setItem("tradeInCarts", JSON.stringify(allCarts));
+    } catch (error) {
+      console.error("Gagal menyimpan keranjang tukar tambah:", error);
+    }
+  };
+
+  useEffect(() => {
+    setTradeInCart(getTradeInCartFromStorage(tradeInCurrentCustomer));
+  }, [tradeInCurrentCustomer]);
+
+  const addToTradeInCart = (item) => {
+    setTradeInCart((prevCart) => {
+      const updatedCart = [...prevCart, item];
+      saveTradeInCartToStorage(tradeInCurrentCustomer, updatedCart);
+      return updatedCart;
+    });
+  };
+
+  const removeFromTradeInCart = (indexToRemove) => {
+    setTradeInCart((prevCart) => {
+      const updatedCart = prevCart.filter((_, index) => index !== indexToRemove);
+      saveTradeInCartToStorage(tradeInCurrentCustomer, updatedCart);
+      return updatedCart;
+    });
+  };
+
+  const fetchCountPrice = useCallback(async (customerIndex) => {
+    const activeCustomerIndex = customerIndex !== undefined ? customerIndex : currentCustomer;
     try {
       setLoadingCountPrice(true);
-      const carts = getCartFromStorage(currentCustomer);
-      if (carts.length === 0) return;
-      const result = await countPrice(carts);
+      const activeCart = getCartFromStorage(activeCustomerIndex);
+      if (activeCart.length === 0) {
+        setResultCounPrice([]);
+        return;
+      }
+      const result = await countPrice(activeCart);
       setResultCounPrice(result.data.cart);
     } catch (err) {
       setErrorCountPrice(err.message);
@@ -95,12 +143,64 @@ function MainLayout() {
     }
   }, [currentCustomer]);
 
-  const handleShowModal = () => {
-    if (cart.length > 0) {
+const handleShowModal = () => {
+  const isReturPage = location.pathname.startsWith('/retur');
+
+  if (isReturPage) {
+    const currentTradeInCart = getTradeInCartFromStorage(tradeInCurrentCustomer);
+    const returSellCart = getReturSellCartFromStorage(tradeInCurrentCustomer);
+
+    if (currentTradeInCart.length > 0 || returSellCart.length > 0) {
       setShowModal(true);
-      fetchCountPrice();
+
+      const markedTradeInCart = currentTradeInCart.map(item => ({
+        ...item,
+        source: "retur"
+      }));
+
+      const markedReturSellCart = returSellCart.map(item => ({
+        ...item,
+        source: "penjualan"
+      }));
+
+      // --- 🔑 Gabungkan item dengan comodity + source yang sama
+      const mergedCart = [...markedReturSellCart, ...markedTradeInCart].reduce((acc, item) => {
+        const key = `${item.comodity}-${item.source}`;
+        const existing = acc.find(x => `${x.comodity}-${x.source}` === key);
+
+        if (existing) {
+          existing.totalWeight += item.totalWeight;
+          existing.totalPrice += item.totalPrice;
+        } else {
+          acc.push({ ...item });
+        }
+
+        return acc;
+      }, []);
+
+      setResultCounPrice(mergedCart);
     }
-  };
+  } else {
+    const currentRegularCart = getCartFromStorage(currentCustomer);
+    if (currentRegularCart.length > 0) {
+      setShowModal(true);
+      fetchCountPrice(currentCustomer);
+    }
+  }
+};
+
+
+const getReturSellCartFromStorage = (tradeInCurrentCustomer) => {
+  try {
+    const key = `retur_sell_${tradeInCurrentCustomer}`;
+    return JSON.parse(localStorage.getItem(key) || "[]");
+  } catch (error) {
+    console.error("Gagal mengambil keranjang retur:", error);
+    return [];
+  }
+};
+
+
 
   const handleCloseModal = () => {
     setShowModal(false);
@@ -147,18 +247,14 @@ function MainLayout() {
     } catch (error) {
       setErrorSaveTransaction(error.message);
       Swal.fire('Error', `Gagal menyimpan transaksi: ${error.message}`, 'error');
-
-      // 3. LEMPAR KEMBALI error agar bisa ditangkap oleh .catch() di Dashboard
       throw error;
 
     } finally {
-      // Selalu jalankan ini di akhir, baik sukses maupun gagal
       handleCloseModal();
       setLoadingSaveTransaction(false);
     }
   };
 
-  // Fetching data untuk list barang
   const fetchGoods = useCallback(async () => {
     try {
       setLoadingGoods(true);
@@ -221,17 +317,28 @@ function MainLayout() {
   };
 
   const contextValue = {
-    // State dan fungsi yang akan dibagikan
     goodsList, groupedGoods, alphabet, selectedLetter, setSelectedLetter,
     loadingGoods, errorLoadingGoods,
     currentCustomer, setCurrentCustomer,
     cart, setCart, addToCart, removeFromCart,
+    // Bagikan state dan fungsi tukar tambah
+    tradeInCurrentCustomer, setTradeInCurrentCustomer,
+    tradeInCart, addToTradeInCart, removeFromTradeInCart,
     showModal, setShowModal, handleShowModal, handleCloseModal,
     resultCountPrice, loadingCountPrice, errorCountPrice,
     discounts, setDiscounts,
     paymentAmount, setPaymentAmount,
-    fetchTransaction, loadingSaveTransaction, errorSaveTransaction
+    fetchTransaction, loadingSaveTransaction, errorSaveTransaction, getReturSellCartFromStorage
   };
+
+  const isReturPage = location.pathname.startsWith('/retur');
+  const activeCustomerForFooter = isReturPage ? tradeInCurrentCustomer : currentCustomer;
+
+  const cartForFooter = getCartFromStorage(activeCustomerForFooter);
+  const tradeInCartForFooter = isReturPage ? getTradeInCartFromStorage(activeCustomerForFooter) : [];
+
+  const badgeCount = cartForFooter.length + tradeInCartForFooter.length;
+  const isButtonDisabled = badgeCount === 0;
 
   return (
     <GoodsContext.Provider
@@ -280,7 +387,6 @@ function MainLayout() {
               ))}
             </div>
 
-            {/* Logout */}
             <ul className="navbar-nav ms-auto align-items-lg-center mt-3 mt-lg-0">
               <li className="nav-item">
                 <Link
@@ -301,15 +407,12 @@ function MainLayout() {
           style={{
             backgroundColor: '#f4f6f8',
             minHeight: 'calc(100vh - 70px)',
-            paddingBottom: '70px' // tingginya kira-kira sama dengan footer
+            paddingBottom: '70px'
           }}
         >
           <Outlet />
         </main>
 
-
-        {/* Footer menu */}
-        {/* Footer menu - Fixed */}
         <footer
           className="shadow-sm"
           style={{
@@ -323,27 +426,27 @@ function MainLayout() {
               Regular
             </NavLink>
             <NavLink to="/retur" className={({ isActive }) => `nav-link ${isActive ? "fw-bold text-primary" : "text-dark"}`}>
-              Retur
+              Tukar Tambah
             </NavLink>
             <NavLink to="/transaksi" className={({ isActive }) => `nav-link ${isActive ? "fw-bold text-primary" : "text-dark"}`}>
               Riwayat Transaksi Kasir
             </NavLink>
 
-            {/* Tombol Keranjang/Selesaikan Pesanan yang baru */}
             <div style={{ position: 'absolute', right: '20px' }}>
               <Button
                 variant="success"
                 className="d-flex align-items-center gap-2"
                 onClick={handleShowModal}
-                disabled={cart.length === 0 || loadingGoods}
+                // Gunakan variabel yang sudah dihitung
+                disabled={isButtonDisabled || loadingGoods}
               >
                 <BiCart size={24} />
                 <span className="fw-bold">
                   Selesaikan Pesanan
                 </span>
-                {cart.length > 0 && (
+                {badgeCount > 0 && (
                   <Badge pill bg="danger">
-                    {cart.length}
+                    {badgeCount}
                   </Badge>
                 )}
               </Button>
