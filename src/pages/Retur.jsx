@@ -424,9 +424,8 @@ const fetchdummy = async (summaryData) => {
 
                                             <td className="text-center">
                                                 {item.disableDiscountEdit ? (
-                                                    // kalau dari retur → tampilkan fix discount, tanpa tombol
                                                     <span className="fw-bold text-danger">
-                                                        Rp {returDiscount.toLocaleString('id-ID')}
+                                                        Rp {item.totalPrice.toLocaleString('id-ID')}
                                                     </span>
                                                 ) : (
                                                     <InputGroup style={{ minWidth: '150px', margin: 'auto' }}>
@@ -455,7 +454,17 @@ const fetchdummy = async (summaryData) => {
 
                                             <td className="text-end">
                                                 <span className="fw-bold fs-6">
-                                                    Rp {priceAfterDiscount.toLocaleString('id-ID')}
+                                                    {item.disableDiscountEdit ? (
+                                                        <>
+                                                        Rp {totalPrice.toLocaleString('id-ID')}
+                                                        </>
+                                                    ):
+                                                    (
+                                                        <>
+                                                        Rp {priceAfterDiscount.toLocaleString('id-ID')}
+                                                        </>
+                                                    )}
+                                                    
                                                 </span>
                                                 {totalDiscount > 0 && (
                                                     <div className="text-muted small text-decoration-line-through">
