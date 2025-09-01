@@ -186,3 +186,12 @@ export const getTransactionByCashier = async(start, end, username) => {
         return error.response || { status: 500, data: { message: error.message || 'Terjadi kesalahan' } };
     }
 }
+
+export const saveReturTransaction = async(transaction) => {
+    try{
+        const response = await axios.post(`${API_BASE_URL}cashier/savereturtransaction`, { transaction: transaction }, { withCredentials: true });
+        return response
+    } catch (error) {
+        return error.response || { status: 500, data: { message: error.message || 'Terjadi kesalahan' } };
+    }
+}

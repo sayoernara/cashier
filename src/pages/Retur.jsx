@@ -1,17 +1,67 @@
 import React, { useCallback, useState, useContext, useMemo, useEffect } from 'react';
-import { getGoodsPricePerGram, getStorageData } from './apis/api';
+import { getGoodsPricePerGram, getStorageData, saveReturTransaction } from './apis/api';
 import { Alert, Col, Row, Spinner, Card, Button, Modal, Form, InputGroup, ListGroup, Table } from 'react-bootstrap';
 import { BiCart, BiPlus, BiTransfer } from 'react-icons/bi';
 import { CiImageOff } from 'react-icons/ci';
 import { GoodsContext } from './components/GoodsContext';
 import { FaShoppingBag, FaBalanceScale } from 'react-icons/fa';
 import './Dashboard.css';
+import Swal from 'sweetalert2';
+
+const printReceipt = async (receiptData , number) => {
+  try {
+    const { items, summary } = receiptData;
+    const transactionNumber = number;
+    const line = '--------------------------------\n';
+    let receiptText = '';
+    receiptText += '       Sayoernara\n';
+    receiptText += `No: ${transactionNumber}\n`;
+    receiptText += `Tgl: ${new Date().toLocaleString('id-ID')}\n`;
+    receiptText += line;
+    items.forEach(item => {
+      const priceAfterDiscount = item.totalPrice - (item.discount || 0);
+      const itemName = `${item.comodity} (${item.totalWeight} gr)`;
+      const itemPrice = `Rp ${priceAfterDiscount.toLocaleString('id-ID')}`;
+      const type = item.type;
+      const receiptWidth = 32;
+      const spaces = receiptWidth - itemName.length - itemPrice.length;
+      receiptText += `${type} --> ${itemName}${' '.repeat(Math.max(0, spaces))}${itemPrice}\n`;
+    });
+    receiptText += line;
+    const formatSummaryLine = (label, value) => {
+      const receiptWidth = 32;
+      const formattedValue = `Rp ${value.toLocaleString('id-ID')}`;
+      const spaces = receiptWidth - label.length - formattedValue.length;
+      return `${label}${' '.repeat(Math.max(0, spaces))}${formattedValue}\n`;
+    }
+    receiptText += formatSummaryLine('Subtotal', summary.subtotal);
+    if (summary.totalDiscount > 0) {
+      receiptText += formatSummaryLine('Diskon', -summary.totalDiscount);
+    }
+    receiptText += formatSummaryLine('Grand Total', summary.grandTotal);
+    receiptText += line;
+    receiptText += formatSummaryLine('Bayar', summary.paymentAmount);
+    receiptText += formatSummaryLine('Kembali', summary.change);
+    receiptText += '\nTerima Kasih!\n\n';
+    const cutCommand = '\x1D\x56\x42\x00';
+    receiptText += cutCommand;
+    const base64String = btoa(receiptText);
+    window.location.href = `rawbt:base64,${base64String}`;
+  } catch (error) {
+    console.error("Gagal mencetak struk:", error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Gagal Mencetak',
+      text: 'Pastikan aplikasi RawBT sudah terinstall dan berjalan dengan baik di perangkat Anda.',
+    });
+  }
+};
 
 function Retur() {
     const {
         groupedGoods, selectedLetter, loadingGoods, errorLoadingGoods,
         tradeInCurrentCustomer, setTradeInCurrentCustomer,
-        tradeInCart, addToTradeInCart, removeFromTradeInCart,
+        tradeInCart, setTradeInCart, addToTradeInCart, removeFromTradeInCart,
         showModal, handleShowModal, handleCloseModal,
         resultCountPrice, loadingCountPrice, errorCountPrice,
         discounts, setDiscounts,
@@ -19,7 +69,6 @@ function Retur() {
         fetchTransaction, loadingSaveTransaction
     } = useContext(GoodsContext);
     const [returSellCart, setReturSellCart] = useState([]);
-
     const [showModalCstmW, setShowModalCstmW] = useState(false);
     const [selectedIdItem, setSelectedIdItem] = useState('');
     const [selectedItemNm, setSelectedItemNm] = useState('');
@@ -118,18 +167,18 @@ function Retur() {
     const handlePrevCustomer = () => { if (tradeInCurrentCustomer > 0) setTradeInCurrentCustomer((prev) => prev - 1); };
 
     const subtotal = resultCountPrice
-  .filter(item => item.source === "penjualan")
-  .reduce((sum, item) => sum + item.totalPrice, 0);
+        .filter(item => item.source === "penjualan")
+        .reduce((sum, item) => sum + item.totalPrice, 0);
 
-const totalDiscount = resultCountPrice
-  .filter(item => item.source === "penjualan")
-  .reduce((sum, item, idx) => sum + (discounts[idx] || 0), 0);
+    const totalDiscount = resultCountPrice
+        .filter(item => item.source === "penjualan")
+        .reduce((sum, item, idx) => sum + (discounts[idx] || 0), 0);
 
-const tradeInTotal = resultCountPrice
-  .filter(item => item.source === "retur")
-  .reduce((sum, item) => sum + item.totalPrice, 0);
+    const tradeInTotal = resultCountPrice
+        .filter(item => item.source === "retur")
+        .reduce((sum, item) => sum + item.totalPrice, 0);
 
-const grandTotal = subtotal - totalDiscount - tradeInTotal;
+    const grandTotal = subtotal - totalDiscount - tradeInTotal;
 
     const change = parseInt(paymentAmount || 0, 10) - grandTotal;
 
@@ -247,58 +296,78 @@ const grandTotal = subtotal - totalDiscount - tradeInTotal;
         return item;
     });
 
-const fetchdummy = async (summaryData) => {
-  // Gabungkan penjualan + tukar tambah
-  const allItems = [
-    ...returSellCart.map((item, index) => ({
-      comodity: item.comodity,
-      id_item: item.id_item,
-      totalWeight: item.totalWeight,
-      originalPrice: item.totalPrice,
-      discount: discounts[index] || 0, // diskon manual hanya untuk penjualan
-      finalPrice: item.totalPrice - (discounts[index] || 0),
-      type: item.type || "PENJUALAN",
-    })),
-    ...tradeInCart.map((item) => ({
-      comodity: item.comodity,
-      id_item: item.id_item,
-      totalWeight: item.totalWeight,
-      originalPrice: item.totalPrice,
-      discount: item.totalPrice, // untuk retur, dianggap diskon penuh
-      finalPrice: 0, // karena retur nilainya mengurangi total
-      type: item.type || "PENGEMBALIAN",
-    })),
-  ];
+    const fetchdummy = async (summaryData) => {
+        // Gabungkan penjualan + tukar tambah
+        const allItems = [
+            ...returSellCart.map((item, index) => ({
+                comodity: item.comodity,
+                id_item: item.id_item,
+                totalWeight: item.totalWeight,
+                originalPrice: item.totalPrice,
+                discount: discounts[index] || 0, // diskon manual hanya untuk penjualan
+                finalPrice: item.totalPrice - (discounts[index] || 0),
+                type: item.type || "PENJUALAN",
+            })),
+            ...tradeInCart.map((item) => ({
+                comodity: item.comodity,
+                id_item: item.id_item,
+                totalWeight: item.totalWeight,
+                originalPrice: item.totalPrice,
+                discount: item.totalPrice, // untuk retur, dianggap diskon penuh
+                finalPrice: 0, // karena retur nilainya mengurangi total
+                type: item.type || "PENGEMBALIAN",
+            })),
+        ];
 
-  // Gabungkan item dengan id_item + comodity yang sama
-  const mergedItems = Object.values(
-    allItems.reduce((acc, item) => {
-      const key = `${item.id_item}-${item.comodity}`;
-      if (!acc[key]) {
-        acc[key] = { ...item };
-      } else {
-        acc[key].totalWeight += item.totalWeight;
-        acc[key].originalPrice += item.originalPrice;
-        acc[key].discount += item.discount;
-        acc[key].finalPrice += item.finalPrice;
-      }
-      return acc;
-    }, {})
-  );
+        // Gabungkan item dengan id_item + comodity yang sama
+        const mergedItems = Object.values(
+            allItems.reduce((acc, item) => {
+                const key = `${item.id_item}-${item.comodity}`;
+                if (!acc[key]) {
+                    acc[key] = { ...item };
+                } else {
+                    acc[key].totalWeight += item.totalWeight;
+                    acc[key].originalPrice += item.originalPrice;
+                    acc[key].discount += item.discount;
+                    acc[key].finalPrice += item.finalPrice;
+                }
+                return acc;
+            }, {})
+        );
 
-  const transactionPayload = {
-    customerIndex: tradeInCurrentCustomer,
-    items: mergedItems,
-    summary: summaryData,
-    location: getStorageData().decryptidloc,
-    cashier: getStorageData().decryptuname,
-    transactionDate: new Date().toISOString(),
-  };
+        const transactionPayload = {
+            customerIndex: tradeInCurrentCustomer,
+            items: mergedItems,
+            summary: summaryData,
+            location: getStorageData().decryptidloc,
+            cashier: getStorageData().decryptuname,
+            transactionDate: new Date().toISOString(),
+        };
 
-  console.log("Payload Transaksi:", transactionPayload);
-};
+        // console.log("Payload Transaksi:", transactionPayload);
+        fetchReturTransaction(transactionPayload)
+    };
 
+    const fetchReturTransaction = async (transactionPayload) => {
+        try {
+            const response = await saveReturTransaction(transactionPayload);
+            Swal.fire('Sukses', `Transaksi berhasil dengan nomor: ${response.data.message.number}`);
+            printReceipt(transactionPayload, response.data.message.number)
 
+            localStorage.setItem("tradeInCarts", JSON.stringify([]));
+            localStorage.setItem("retur_sell_0", JSON.stringify([]));
+            setReturSellCart([]);
+            setTradeInCart([]);
+            console.log("Respons Retur Transaksi:", response);
+        } catch (error) {
+            console.log("Respons Retur Transaksi:", error.message);
+            Swal.fire('Error', `Gagal menyimpan transaksi: ${error.message}`, 'error');
+            return;
+        }
+        finally {
+           handleCloseModal();
+        }
+    }
 
     return (
         <div className="container py-4">
@@ -385,10 +454,10 @@ const fetchdummy = async (summaryData) => {
                             </div>
                         )}
                     </div>
-                    <div className="d-flex gap-2 mt-3">
+                    {/* <div className="d-flex gap-2 mt-3">
                         <Button variant="secondary" size="sm" onClick={handlePrevCustomer} disabled={tradeInCurrentCustomer === 0}>&laquo; Prev</Button>
                         <Button variant="primary" size="sm" onClick={handleNextCustomer} disabled={tradeInCurrentCustomer >= 4}>Next Customer &raquo;</Button>
-                    </div>
+                    </div> */}
                 </Col>
             </Row>
 
@@ -415,11 +484,11 @@ const fetchdummy = async (summaryData) => {
                                     return (
                                         <tr key={idx} className="align-middle">
                                             <td>
-                                              <strong>{item.comodity}</strong>
-                                              <div className="text-muted small">{item.totalWeight} gr</div>
-                                              <div className="small fst-italic">
-                                                {item.source === "penjualan" ? "Penjualan" : "Tukar Tambah"}
-                                              </div>
+                                                <strong>{item.comodity}</strong>
+                                                <div className="text-muted small">{item.totalWeight} gr</div>
+                                                <div className="small fst-italic">
+                                                    {item.source === "penjualan" ? "Penjualan" : "Tukar Tambah"}
+                                                </div>
                                             </td>
 
                                             <td className="text-center">
@@ -456,15 +525,15 @@ const fetchdummy = async (summaryData) => {
                                                 <span className="fw-bold fs-6">
                                                     {item.disableDiscountEdit ? (
                                                         <>
-                                                        Rp {totalPrice.toLocaleString('id-ID')}
+                                                            Rp {totalPrice.toLocaleString('id-ID')}
                                                         </>
-                                                    ):
-                                                    (
-                                                        <>
-                                                        Rp {priceAfterDiscount.toLocaleString('id-ID')}
-                                                        </>
-                                                    )}
-                                                    
+                                                    ) :
+                                                        (
+                                                            <>
+                                                                Rp {priceAfterDiscount.toLocaleString('id-ID')}
+                                                            </>
+                                                        )}
+
                                                 </span>
                                                 {totalDiscount > 0 && (
                                                     <div className="text-muted small text-decoration-line-through">
@@ -494,7 +563,7 @@ const fetchdummy = async (summaryData) => {
                                 type="text"
                                 value={paymentAmount ? parseInt(paymentAmount, 10).toLocaleString('id-ID') : ""}
                                 onChange={handlePaymentChange}
-                                placeholder={grandTotal > 0 ? "Masukkan jumlah uang pembayaran" : "Tidak perlu pembayaran"}
+                                placeholder={grandTotal > 0 ? "Masukkan jumlah uang pembayaran" : 0}
                                 size="lg"
                                 autoFocus
                                 readOnly={grandTotal <= 0}

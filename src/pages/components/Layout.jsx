@@ -4,7 +4,7 @@ import { IoMdLogOut } from 'react-icons/io';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import Cookies from 'js-cookie';
-import { getGoodsList, getStorageData, logout, saveSellTransaction, countPrice } from '../apis/api';
+import { getGoodsList, getStorageData, logout, saveSellTransaction, countPrice, saveReturTransaction } from '../apis/api';
 import { GoodsContext } from './GoodsContext';
 import { Badge, Button, Card } from 'react-bootstrap';
 import { BiCart } from 'react-icons/bi';
@@ -323,7 +323,7 @@ const getReturSellCartFromStorage = (tradeInCurrentCustomer) => {
     cart, setCart, addToCart, removeFromCart,
     // Bagikan state dan fungsi tukar tambah
     tradeInCurrentCustomer, setTradeInCurrentCustomer,
-    tradeInCart, addToTradeInCart, removeFromTradeInCart,
+    tradeInCart, setTradeInCart, addToTradeInCart, removeFromTradeInCart,
     showModal, setShowModal, handleShowModal, handleCloseModal,
     resultCountPrice, loadingCountPrice, errorCountPrice,
     discounts, setDiscounts,
