@@ -8,6 +8,78 @@ import { getGoodsList, getStorageData, logout, saveSellTransaction, countPrice, 
 import { GoodsContext } from './GoodsContext';
 import { Badge, Button, Card } from 'react-bootstrap';
 import { BiCart } from 'react-icons/bi';
+import { FaUserCircle } from 'react-icons/fa';
+import Transaction from '../Transaction';
+
+const modalStyles = {
+  overlay: {
+    position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)', zIndex: 10000,
+    display: 'flex', justifyContent: 'center', alignItems: 'center',
+    backdropFilter: 'blur(5px)', transition: 'opacity 0.3s ease',
+  },
+  content: {
+    backgroundColor: '#ffffff',
+    borderRadius: '16px',
+    width: '90%',
+    maxWidth: '800px',
+    height: '90vh',
+    display: 'flex',
+    flexDirection: 'column',
+    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)',
+    transform: 'scale(0.95)',
+    transition: 'transform 0.3s ease',
+    overflow: 'hidden'
+  },
+  visibleContent: {
+    transform: 'scale(1)',
+  },
+};
+
+const headerStyles = {
+  cashierButton: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    backgroundColor: 'white',
+    border: 'none',
+    borderRadius: '12px',
+    padding: '10px 18px',
+    color: 'black',
+    fontWeight: '700',
+    fontSize: '1.1em',
+    cursor: 'pointer',
+    boxShadow: '0 2px 5px rgba(0, 0, 0, 0.1)',
+  },
+  alphabetCard: {
+    backgroundColor: 'black',
+    color: 'white',
+    border: '2px solid #6c757d',
+    borderRadius: '8px',
+    width: '60px',
+    height: '40px',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    fontWeight: 'bold',
+    fontSize: '1.1em',
+    cursor: 'pointer',
+  },
+  alphabetCardActive: {
+    backgroundColor: '#007bff',
+    color: 'white',
+    border: '2px solid #007bff',
+    borderRadius: '8px',
+    width: '60px',
+    height: '40px',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    fontWeight: 'bold',
+    fontSize: '1.1em',
+    cursor: 'pointer',
+  }
+};
 
 function MainLayout() {
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -36,6 +108,7 @@ function MainLayout() {
   const [paymentAmount, setPaymentAmount] = useState("");
   const [loadingSaveTransaction, setLoadingSaveTransaction] = useState(false);
   const [errorSaveTransaction, setErrorSaveTransaction] = useState(null);
+  const [showHistoryTransactionModal, setShowHistoryTransactionModal] = useState(false);
 
   // --- LOGIKA KERANJANG BIASA (JUAL) ---
   const getCartFromStorage = (customerIndex) => {
@@ -143,62 +216,62 @@ function MainLayout() {
     }
   }, [currentCustomer]);
 
-const handleShowModal = () => {
-  const isReturPage = location.pathname.startsWith('/retur');
+  const handleShowModal = () => {
+    const isReturPage = location.pathname.startsWith('/retur');
 
-  if (isReturPage) {
-    const currentTradeInCart = getTradeInCartFromStorage(tradeInCurrentCustomer);
-    const returSellCart = getReturSellCartFromStorage(tradeInCurrentCustomer);
+    if (isReturPage) {
+      const currentTradeInCart = getTradeInCartFromStorage(tradeInCurrentCustomer);
+      const returSellCart = getReturSellCartFromStorage(tradeInCurrentCustomer);
 
-    if (currentTradeInCart.length > 0 || returSellCart.length > 0) {
-      setShowModal(true);
+      if (currentTradeInCart.length > 0 || returSellCart.length > 0) {
+        setShowModal(true);
 
-      const markedTradeInCart = currentTradeInCart.map(item => ({
-        ...item,
-        source: "retur"
-      }));
+        const markedTradeInCart = currentTradeInCart.map(item => ({
+          ...item,
+          source: "retur"
+        }));
 
-      const markedReturSellCart = returSellCart.map(item => ({
-        ...item,
-        source: "penjualan"
-      }));
+        const markedReturSellCart = returSellCart.map(item => ({
+          ...item,
+          source: "penjualan"
+        }));
 
-      // --- 🔑 Gabungkan item dengan comodity + source yang sama
-      const mergedCart = [...markedReturSellCart, ...markedTradeInCart].reduce((acc, item) => {
-        const key = `${item.comodity}-${item.source}`;
-        const existing = acc.find(x => `${x.comodity}-${x.source}` === key);
+        // --- 🔑 Gabungkan item dengan comodity + source yang sama
+        const mergedCart = [...markedReturSellCart, ...markedTradeInCart].reduce((acc, item) => {
+          const key = `${item.comodity}-${item.source}`;
+          const existing = acc.find(x => `${x.comodity}-${x.source}` === key);
 
-        if (existing) {
-          existing.totalWeight += item.totalWeight;
-          existing.totalPrice += item.totalPrice;
-        } else {
-          acc.push({ ...item });
-        }
+          if (existing) {
+            existing.totalWeight += item.totalWeight;
+            existing.totalPrice += item.totalPrice;
+          } else {
+            acc.push({ ...item });
+          }
 
-        return acc;
-      }, []);
+          return acc;
+        }, []);
 
-      setResultCounPrice(mergedCart);
+        setResultCounPrice(mergedCart);
+      }
+    } else {
+      const currentRegularCart = getCartFromStorage(currentCustomer);
+      if (currentRegularCart.length > 0) {
+        setShowModal(true);
+        fetchCountPrice(currentCustomer);
+      }
     }
-  } else {
-    const currentRegularCart = getCartFromStorage(currentCustomer);
-    if (currentRegularCart.length > 0) {
-      setShowModal(true);
-      fetchCountPrice(currentCustomer);
+  };
+
+
+  const getReturSellCartFromStorage = (tradeInCurrentCustomer) => {
+    try {
+      const key = `retur_sell_${tradeInCurrentCustomer}`;
+      return JSON.parse(localStorage.getItem(key) || "[]");
+    } catch (error) {
+      console.error("Gagal mengambil keranjang retur:", error);
+      return [];
     }
-  }
-};
-
-
-const getReturSellCartFromStorage = (tradeInCurrentCustomer) => {
-  try {
-    const key = `retur_sell_${tradeInCurrentCustomer}`;
-    return JSON.parse(localStorage.getItem(key) || "[]");
-  } catch (error) {
-    console.error("Gagal mengambil keranjang retur:", error);
-    return [];
-  }
-};
+  };
 
 
 
@@ -347,57 +420,36 @@ const getReturSellCartFromStorage = (tradeInCurrentCustomer) => {
       <div className="d-flex flex-column min-vh-100">
         {/* Navbar atas */}
         <nav
-          className="navbar navbar-expand-lg shadow-sm flex items-center justify-between bg-blue-600 text-white px-4 py-2"
+          className="navbar navbar-expand-lg shadow-sm"
           style={{
-            backgroundColor: 'white',
-            padding: '0.75rem 1.5rem',
-            borderBottom: '1px solid #eaeaea',
+            backgroundColor: '#2c3e50',
+            padding: '10px 25px',
             position: 'sticky',
             top: 0,
             zIndex: 1000
           }}
         >
-          <div className="container-fluid d-flex align-items-center">
-            {/* Brand */}
-            <NavLink
-              to="/dashboard"
-              className="navbar-brand fw-bold text-primary"
-              style={{ letterSpacing: '1px' }}
+          <div className="container-fluid d-flex align-items-center justify-content-between">
+            <div
+              onClick={() => setShowHistoryTransactionModal(true)}
+              style={headerStyles.cashierButton}
             >
-              Sayoernara | {rname} ({loc})
-            </NavLink>
-
-            <div className="flex-1 flex justify-center space-x-2 d-flex flex-wrap gap-1 ">
+              <FaUserCircle size={24} />
+              <span>{rname}</span>
+            </div>
+            <div className="d-flex flex-wrap justify-content-center flex-grow-1 gap-2">
               {alphabet.map((letter) => (
-                <Card
+                <div
                   key={letter}
-                  className={`p-2 text-center shadow-sm border ${selectedLetter === letter ? "bg-primary text-white" : ""
-                    }`}
-                  style={{
-                    width: "40px",
-                    height: "40hv",
-                    cursor: "pointer",
-                  }}
+                  style={selectedLetter === letter ? headerStyles.alphabetCardActive : headerStyles.alphabetCard}
                   onClick={() =>
                     setSelectedLetter(selectedLetter === letter ? null : letter)
                   }
                 >
                   {letter}
-                </Card>
+                </div>
               ))}
             </div>
-
-            <ul className="navbar-nav ms-auto align-items-lg-center mt-3 mt-lg-0">
-              <li className="nav-item">
-                <Link
-                  className="nav-link text-danger fw-semibold d-flex align-items-center gap-1"
-                  onClick={handleLogoutClick}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <IoMdLogOut size={20} />
-                </Link>
-              </li>
-            </ul>
           </div>
         </nav>
 
@@ -420,33 +472,41 @@ const getReturSellCartFromStorage = (tradeInCurrentCustomer) => {
             position: 'fixed', bottom: 0, left: 0, width: '100%', zIndex: 1000
           }}
         >
-          <div className="d-flex justify-content-center align-items-center gap-4 position-relative">
-            {/* Menu utama */}
-            <NavLink to="/dashboard" className={({ isActive }) => `nav-link ${isActive ? "fw-bold text-primary" : "text-dark"}`}>
-              Regular
-            </NavLink>
-            <NavLink to="/retur" className={({ isActive }) => `nav-link ${isActive ? "fw-bold text-primary" : "text-dark"}`}>
-              Tukar Tambah
-            </NavLink>
-            <NavLink to="/transaksi" className={({ isActive }) => `nav-link ${isActive ? "fw-bold text-primary" : "text-dark"}`}>
-              Riwayat Transaksi Kasir
-            </NavLink>
+          <div className="d-flex justify-content-between align-items-center">
+            <div>
+              <Link
+                className="nav-link text-danger fw-semibold d-flex align-items-center gap-1"
+                onClick={handleLogoutClick}
+                style={{ cursor: 'pointer' }}
+                to="#"
+              >
+                <IoMdLogOut size={24} />
+              </Link>
+            </div>
 
-            <div style={{ position: 'absolute', right: '20px' }}>
+            <div className="d-flex justify-content-center align-items-center gap-4">
+              <NavLink to="/dashboard" className={({ isActive }) => `nav-link ${isActive ? "fw-bold text-primary" : "text-dark"}`}>
+                Regular
+              </NavLink>
+              <NavLink to="/retur" className={({ isActive }) => `nav-link ${isActive ? "fw-bold text-primary" : "text-dark"}`}>
+                Retur
+              </NavLink>
+            </div>
+
+            <div>
               <Button
                 variant="success"
                 className="d-flex align-items-center gap-2"
                 onClick={handleShowModal}
-                // Gunakan variabel yang sudah dihitung
-                disabled={isButtonDisabled || loadingGoods}
+                disabled={cart.length === 0 || loadingGoods}
               >
                 <BiCart size={24} />
                 <span className="fw-bold">
                   Selesaikan Pesanan
                 </span>
-                {badgeCount > 0 && (
+                {cart.length > 0 && (
                   <Badge pill bg="danger">
-                    {badgeCount}
+                    {cart.length}
                   </Badge>
                 )}
               </Button>
@@ -454,6 +514,20 @@ const getReturSellCartFromStorage = (tradeInCurrentCustomer) => {
           </div>
         </footer>
 
+
+        {showHistoryTransactionModal && (
+          <div
+            style={{ ...modalStyles.overlay, opacity: showHistoryTransactionModal ? 1 : 0 }}
+            onClick={() => setShowHistoryTransactionModal(false)}
+          >
+            <div
+              style={{ ...modalStyles.content, ...modalStyles.visibleContent }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Transaction onClose={() => setShowHistoryTransactionModal(false)} />
+            </div>
+          </div>
+        )}
       </div>
     </GoodsContext.Provider>
   );
