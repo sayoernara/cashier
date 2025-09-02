@@ -493,27 +493,26 @@ function MainLayout() {
               </NavLink>
             </div>
 
-            <div>
+            <div style={{ position: 'absolute', right: '20px' }}>
               <Button
                 variant="success"
                 className="d-flex align-items-center gap-2"
                 onClick={handleShowModal}
-                disabled={cart.length === 0 || loadingGoods}
+                disabled={isButtonDisabled || loadingGoods}
               >
                 <BiCart size={24} />
                 <span className="fw-bold">
                   Selesaikan Pesanan
                 </span>
-                {cart.length > 0 && (
+                {badgeCount > 0 && (
                   <Badge pill bg="danger">
-                    {cart.length}
+                    {badgeCount}
                   </Badge>
                 )}
               </Button>
             </div>
           </div>
         </footer>
-
 
         {showHistoryTransactionModal && (
           <div
