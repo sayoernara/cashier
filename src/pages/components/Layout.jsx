@@ -493,7 +493,7 @@ function MainLayout() {
               </NavLink>
             </div>
 
-            <div style={{ position: 'absolute', right: '20px' }}>
+            <div>
               <Button
                 variant="success"
                 className="d-flex align-items-center gap-2"
