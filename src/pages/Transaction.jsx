@@ -135,15 +135,19 @@ function Transaction({ onClose }) {
 
     const groupedData = useMemo(() => {
         const filtered = transactions.filter(trx =>
-            trx.item_nm.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-            trx.nomor.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+            (trx.item_nm ?? "").toLowerCase().includes((debouncedSearchTerm ?? "").toLowerCase()) ||
+            (trx.nomor ?? "").toLowerCase().includes((debouncedSearchTerm ?? "").toLowerCase())
         );
+
         return filtered.reduce((acc, trx) => {
-            if (!acc[trx.nomor]) { acc[trx.nomor] = []; }
+            if (!acc[trx.nomor]) {
+                acc[trx.nomor] = [];
+            }
             acc[trx.nomor].push(trx);
             return acc;
         }, {});
     }, [transactions, debouncedSearchTerm]);
+
 
     const nomorKeys = Object.keys(groupedData);
 
