@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { getStorageData, getTransactionByCashier } from './apis/api';
-import { Alert, Spinner, Form } from 'react-bootstrap';
+import { Alert, Spinner, Form, Badge } from 'react-bootstrap';
 import dayjs from 'dayjs';
 import 'dayjs/locale/id';
 dayjs.locale('id');
@@ -178,7 +178,7 @@ function Transaction({ onClose }) {
                                     <div style={viewStyles.trxDate}>{dayjs(group[0].tanggal).format('DD MMMM YYYY, HH:mm')}</div>
                                     <ul style={viewStyles.itemList}>
                                         {group.map((item, index) => (
-                                            <li key={index}>{item.item_nm} ({item.weight_kg ? `${item.weight_kg} kg` : '-'})</li>
+                                            <li key={index}>{item.item_nm} ({item.weight_kg ? `${item.weight_kg} kg` : '-'}) <Badge bg={item.type === 'PENJUALAN' ? 'success' : 'danger'}>{item.type}</Badge></li>
                                         ))}
                                     </ul>
                                 </div>
