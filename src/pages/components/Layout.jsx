@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useContext } from 'react';
 import './LayoutStyle.css'
 import { IoMdLogOut } from 'react-icons/io';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
@@ -81,6 +81,64 @@ const headerStyles = {
   }
 };
 
+// --- KOMPONEN POPOVER KERANJANG BELANJA ---
+const CartPopover = ({ cart, onRemove, onCheckout, grandTotal }) => {
+  return (
+    <div style={{
+      position: 'absolute',
+      bottom: '80px',
+      right: '20px',
+      width: '380px',
+      maxHeight: 'calc(100vh - 100px)',
+      backgroundColor: 'white',
+      borderRadius: '12px',
+      boxShadow: '0 5px 20px rgba(0,0,0,0.2)',
+      zIndex: 1100,
+      display: 'flex',
+      flexDirection: 'column',
+      border: '1px solid #ddd'
+    }}>
+      <div style={{ padding: '1rem', borderBottom: '1px solid #eee' }}>
+        <h5 className="mb-0 fw-bold">Keranjang Belanja</h5>
+      </div>
+      {cart.length === 0 ? (
+        <p className="text-muted small fst-italic m-3 text-center">Belum ada item</p>
+      ) : (
+        <div style={{ flex: 1, overflowY: "auto", padding: '0.5rem 1rem' }}>
+          <ul className="list-group list-group-flush small rounded">
+            {[...cart].reverse().map((item, index) => (
+              <li key={index} className="list-group-item d-flex justify-content-between align-items-center px-0 py-2">
+                <div>
+                  <strong className="d-block">{item.comodity}</strong>
+                  <span className="text-muted">{item.totalWeight} gr</span>
+                  <strong className="d-block mt-1" style={{color: '#007bff'}}>
+                    Rp {item.totalPrice.toLocaleString('id-ID')}
+                  </strong>
+                </div>
+                <Button variant="outline-danger" size="sm" onClick={() => onRemove(item.comodity)}>
+                  Hapus
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {cart.length > 0 && (
+        <div style={{ padding: '1rem', borderTop: '1px solid #eee', backgroundColor: '#f8f9fa' }}>
+           <div className='d-flex justify-content-between align-items-center mb-3'>
+              <span className='fw-bold'>Total</span>
+              <span className='fw-bold fs-5'>Rp {grandTotal.toLocaleString('id-ID')}</span>
+           </div>
+           <Button variant="success" className="w-100 fw-bold" onClick={onCheckout}>
+             Lanjutkan ke Pembayaran
+           </Button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// --- KOMPONEN UTAMA LAYOUT ---
 function MainLayout() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const rname = getStorageData().decryptrname;
@@ -93,9 +151,7 @@ function MainLayout() {
   const [errorLoadingGoods, setErrorLoadingGoods] = useState(null);
   const [selectedLetter, setSelectedLetter] = useState(null);
 
-  // State untuk customer di halaman Regular (Dashboard)
   const [currentCustomer, setCurrentCustomer] = useState(0);
-  // State untuk customer di halaman Tukar Tambah (Retur)
   const [tradeInCurrentCustomer, setTradeInCurrentCustomer] = useState(0);
 
   const [cart, setCart] = useState([]);
@@ -109,8 +165,8 @@ function MainLayout() {
   const [loadingSaveTransaction, setLoadingSaveTransaction] = useState(false);
   const [errorSaveTransaction, setErrorSaveTransaction] = useState(null);
   const [showHistoryTransactionModal, setShowHistoryTransactionModal] = useState(false);
+  const [isCartVisible, setIsCartVisible] = useState(false);
 
-  // --- LOGIKA KERANJANG BIASA (JUAL) ---
   const getCartFromStorage = (customerIndex) => {
     const carts = JSON.parse(localStorage.getItem("carts") || "{}");
     return carts[customerIndex] || [];
@@ -132,21 +188,15 @@ function MainLayout() {
       const numWeight = parseInt(weight, 10);
       const numPrice = parseInt(price, 10);
 
-      const existingItemIndex = prevCart.findIndex(
-        (item) => item.comodity === comodity && item.id_item === id_item
-      );
+      const newItem = {
+        id: Date.now(),
+        comodity,
+        id_item,
+        totalWeight: numWeight,
+        totalPrice: numPrice,
+      };
 
-      let updatedCart;
-      if (existingItemIndex > -1) {
-        updatedCart = prevCart.map((item, index) =>
-          index === existingItemIndex ?
-            { ...item, totalWeight: item.totalWeight + numWeight, totalPrice: item.totalPrice + numPrice, } :
-            item
-        );
-      } else {
-        updatedCart = [...prevCart, { comodity, id_item, totalWeight: numWeight, totalPrice: numPrice, },];
-      }
-
+      const updatedCart = [...prevCart, newItem];
       saveCartToStorage(currentCustomer, updatedCart);
       return updatedCart;
     });
@@ -236,7 +286,6 @@ function MainLayout() {
           source: "penjualan"
         }));
 
-        // --- 🔑 Gabungkan item dengan comodity + source yang sama
         const mergedCart = [...markedReturSellCart, ...markedTradeInCart].reduce((acc, item) => {
           const key = `${item.comodity}-${item.source}`;
           const existing = acc.find(x => `${x.comodity}-${x.source}` === key);
@@ -262,7 +311,6 @@ function MainLayout() {
     }
   };
 
-
   const getReturSellCartFromStorage = (tradeInCurrentCustomer) => {
     try {
       const key = `retur_sell_${tradeInCurrentCustomer}`;
@@ -272,8 +320,6 @@ function MainLayout() {
       return [];
     }
   };
-
-
 
   const handleCloseModal = () => {
     setShowModal(false);
@@ -333,12 +379,12 @@ function MainLayout() {
       setLoadingGoods(true);
       const result = await getGoodsList();
       setGoodsList(result.data.goods[0]);
-    } catch (err) {
+    } catch (err) { 
       setErrorLoadingGoods(err.message);
     } finally {
       setLoadingGoods(false);
     }
-  }, []);
+  }, []); 
 
   useEffect(() => {
     fetchGoods();
@@ -394,7 +440,6 @@ function MainLayout() {
     loadingGoods, errorLoadingGoods,
     currentCustomer, setCurrentCustomer,
     cart, setCart, addToCart, removeFromCart,
-    // Bagikan state dan fungsi tukar tambah
     tradeInCurrentCustomer, setTradeInCurrentCustomer,
     tradeInCart, setTradeInCart, addToTradeInCart, removeFromTradeInCart,
     showModal, setShowModal, handleShowModal, handleCloseModal,
@@ -406,19 +451,42 @@ function MainLayout() {
 
   const isReturPage = location.pathname.startsWith('/retur');
   const activeCustomerForFooter = isReturPage ? tradeInCurrentCustomer : currentCustomer;
-
-  const cartForFooter = getCartFromStorage(activeCustomerForFooter);
+  const cartForFooter = cart; 
   const tradeInCartForFooter = isReturPage ? getTradeInCartFromStorage(activeCustomerForFooter) : [];
-
   const badgeCount = cartForFooter.length + tradeInCartForFooter.length;
   const isButtonDisabled = badgeCount === 0;
+
+  const handleNextCustomer = () => {
+    if (isReturPage) {
+      if (tradeInCurrentCustomer < 4) {
+        setTradeInCurrentCustomer(prev => prev + 1);
+      }
+    } else {
+      if (currentCustomer < 4) {
+        setCurrentCustomer(prev => prev + 1);
+      }
+    }
+  };
+
+  const handlePrevCustomer = () => {
+    if (isReturPage) {
+      if (tradeInCurrentCustomer > 0) {
+        setTradeInCurrentCustomer(prev => prev - 1);
+      }
+    } else {
+      if (currentCustomer > 0) {
+        setCurrentCustomer(prev => prev - 1);
+      }
+    }
+  };
+  
+  const grandTotalInCart = cartForFooter.reduce((total, item) => total + item.totalPrice, 0);
 
   return (
     <GoodsContext.Provider
       value={contextValue}
     >
       <div className="d-flex flex-column min-vh-100">
-        {/* Navbar atas */}
         <nav
           className="navbar navbar-expand-lg shadow-sm"
           style={{
@@ -453,11 +521,10 @@ function MainLayout() {
           </div>
         </nav>
 
-        {/* Konten utama */}
         <main
           className="flex-grow-1 p-0"
           style={{
-            backgroundColor: '#f4f6f8',
+            backgroundColor: '#000000ff',
             minHeight: 'calc(100vh - 70px)',
             paddingBottom: '70px'
           }}
@@ -484,25 +551,35 @@ function MainLayout() {
               </Link>
             </div>
 
-            <div className="d-flex justify-content-center align-items-center gap-4">
-              <NavLink to="/dashboard" className={({ isActive }) => `nav-link ${isActive ? "fw-bold text-primary" : "text-dark"}`}>
-                Regular
-              </NavLink>
-              <NavLink to="/retur" className={({ isActive }) => `nav-link ${isActive ? "fw-bold text-primary" : "text-dark"}`}>
-                Retur
-              </NavLink>
+            <div className="d-flex justify-content-center align-items-center gap-3">
+              <Button variant="secondary" size="sm" onClick={handlePrevCustomer} disabled={activeCustomerForFooter === 0}>
+                &laquo; Prev Customer
+              </Button>
+              <div className="d-flex flex-column align-items-center">
+                <div className='d-flex gap-4'>
+                  <NavLink to="/dashboard" className={({ isActive }) => `nav-link ${isActive ? "fw-bold text-primary" : "text-dark"}`}>
+                    Regular
+                  </NavLink>
+                  <NavLink to="/retur" className={({ isActive }) => `nav-link ${isActive ? "fw-bold text-primary" : "text-dark"}`}>
+                    Retur
+                  </NavLink>
+                </div>
+              </div>
+              <Button variant="primary" size="sm" onClick={handleNextCustomer} disabled={activeCustomerForFooter >= 4}>
+                Next Customer &raquo;
+              </Button>
             </div>
-
+            
             <div>
               <Button
                 variant="success"
                 className="d-flex align-items-center gap-2"
-                onClick={handleShowModal}
-                disabled={isButtonDisabled || loadingGoods}
+                onClick={() => setIsCartVisible(!isCartVisible)}
+                disabled={loadingGoods}
               >
                 <BiCart size={24} />
                 <span className="fw-bold">
-                  Selesaikan Pesanan
+                  Keranjang
                 </span>
                 {badgeCount > 0 && (
                   <Badge pill bg="danger">
@@ -511,8 +588,21 @@ function MainLayout() {
                 )}
               </Button>
             </div>
+
           </div>
         </footer>
+        
+        {isCartVisible && (
+          <CartPopover
+            cart={cartForFooter}
+            onRemove={removeFromCart}
+            grandTotal={grandTotalInCart}
+            onCheckout={() => {
+              setIsCartVisible(false);
+              handleShowModal();
+            }}
+          />
+        )}
 
         {showHistoryTransactionModal && (
           <div

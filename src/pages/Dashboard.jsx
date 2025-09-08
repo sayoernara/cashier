@@ -7,6 +7,10 @@ import { GoodsContext } from './components/GoodsContext';
 import { FaShoppingBag, FaBalanceScale } from 'react-icons/fa';
 import './Dashboard.css';
 import Swal from 'sweetalert2';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Pagination } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/pagination';
 
 // --- FUNGSI HELPER UNTUK CETAK ---
 const printReceipt = async (receiptData) => {
@@ -55,8 +59,9 @@ const printReceipt = async (receiptData) => {
     });
   }
 };
+
 // --- KELOMPOK KOMPONEN UNTUK CUSTOMISASI BERAT (MODAL & SLIDER) ---
-const CustomRangeSlider = ({ label, value, min, max, step, onChange, price, unit, iconType, onRelease }) => { // MODIFIKASI: Tambah prop onRelease
+const CustomRangeSlider = ({ label, value, min, max, step, onChange, price, unit, iconType, onRelease }) => {
   const [tooltipActive, setTooltipActive] = useState(false);
   const bars = useMemo(() => Array.from({ length: 20 }), []);
   const percentage = max > min ? ((value - min) * 100) / (max - min) : 0;
@@ -66,7 +71,6 @@ const CustomRangeSlider = ({ label, value, min, max, step, onChange, price, unit
     setTooltipActive(true);
   };
   
-  // MODIFIKASI: Panggil onRelease saat slider dilepas
   const handleMouseUp = () => {
     setTooltipActive(false);
     if (onRelease) {
@@ -179,20 +183,18 @@ const CustomWeightModal = ({ show, onHide, itemId, itemName }) => {
     ? `${(combinedTotalWeight / 1000).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 3 })} KG`
     : `${combinedTotalWeight} GR`;
 
-  // BARU: Fungsi untuk menangani penambahan item saat slider KG dilepas
   const handleKgSliderRelease = () => {
     const weightInGram = kgValue * 1000;
     if (weightInGram > 0 && priceKg > 0) {
       addToCart(itemName, itemId, weightInGram, priceKg);
-      setKgValue(0); // Langsung reset slider
+      setKgValue(0); 
     }
   };
 
-  // BARU: Fungsi untuk menangani penambahan item saat slider Gram dilepas
   const handleGramSliderRelease = () => {
     if (gramValue > 0 && priceGram > 0) {
       addToCart(itemName, itemId, gramValue, priceGram);
-      setGramValue(0); // Langsung reset slider
+      setGramValue(0); 
     }
   };
 
@@ -233,14 +235,14 @@ const CustomWeightModal = ({ show, onHide, itemId, itemName }) => {
             min={0} max={20} step={1}
             onChange={(e) => setKgValue(parseInt(e.target.value, 10))}
             price={priceKg} unit="kg" iconType="kg"
-            onRelease={handleKgSliderRelease} // MODIFIKASI: Kirim fungsi handler
+            onRelease={handleKgSliderRelease}
           />
           <CustomRangeSlider
             label={`Kelipatan 50 gr (0 - 950 gr)`} value={gramValue}
             min={0} max={950} step={50}
             onChange={(e) => setGramValue(parseInt(e.target.value, 10))}
             price={priceGram} unit="gr" iconType="gr"
-            onRelease={handleGramSliderRelease} // MODIFIKASI: Kirim fungsi handler
+            onRelease={handleGramSliderRelease}
           />
         </div>
 
@@ -261,7 +263,6 @@ const CustomWeightModal = ({ show, onHide, itemId, itemName }) => {
             <div className="total-summary-row price">
               <span className="total-summary-value">{combinedTotalPrice.toLocaleString('id-ID')}</span>
             </div>
-            {/* DIHAPUS: Tombol "+ Tambahkan" sudah tidak diperlukan lagi */}
           </div>
         </div>
       </Modal.Body>
@@ -269,48 +270,7 @@ const CustomWeightModal = ({ show, onHide, itemId, itemName }) => {
   );
 };
 
-// ---KOMPONEN UNTUK KERANJANG BELANJA (CART) & TRANSAKSI ---
-const CartSidebar = ({ currentCustomer, cart, onRemove, onNext, onPrev }) => {
-  return (
-    <>
-      <h4 className="mt-4"><BiCart /> Cart Customer #{currentCustomer + 1}</h4>
-      <div style={{
-        backgroundColor: '#f8f9fa', borderRadius: '5px',
-        height: "calc(100vh - 250px)",
-        display: "flex", flexDirection: "column"
-      }}>
-        {cart.length === 0 ? (
-          <p className="text-muted small fst-italic m-2">Belum ada item</p>
-        ) : (
-          <div className='cartitemlist' style={{ flex: 1, overflowY: "auto" }}>
-            <ul className="list-group small shadow-sm rounded">
-              {[...cart].reverse().map((item, index) => (
-                <li key={index} className="list-group-item d-flex justify-content-between align-items-center">
-                  <div>
-                    <strong>{item.comodity}</strong>
-                    <div className="text-muted">Total: {item.totalWeight} gr</div>
-                  </div>
-                  <Button variant="outline-danger" size="sm" onClick={() => onRemove(item.comodity)}>
-                    Hapus
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </div>
-      <div className="d-flex gap-2 mt-3">
-        <Button variant="secondary" size="sm" onClick={onPrev} disabled={currentCustomer === 0}>
-          &laquo; Prev
-        </Button>
-        <Button variant="primary" size="sm" onClick={onNext} disabled={currentCustomer >= 4}>
-          Next Customer &raquo;
-        </Button>
-      </div>
-    </>
-  );
-};
-
+// --- KOMPONEN MODAL TRANSAKSI ---
 const TransactionModal = ({ show, onHide, currentCustomer }) => {
   const {
     resultCountPrice, loadingCountPrice, errorCountPrice,
@@ -435,13 +395,12 @@ const TransactionModal = ({ show, onHide, currentCustomer }) => {
   );
 };
 
-// --- KOMPONEN UTAMA DASHBOARD (SEKARANG BERTINDAK SEBAGAI "CONTROLLER") ---
-
+// --- KOMPONEN UTAMA DASHBOARD ---
 function Dashboard() {
   const {
     groupedGoods, selectedLetter, loadingGoods, errorLoadingGoods,
-    currentCustomer, setCurrentCustomer, cart, addToCart, removeFromCart,
-    showModal, handleCloseModal
+    addToCart,
+    showModal, handleCloseModal, currentCustomer
   } = useContext(GoodsContext);
 
   const [showModalCstmW, setShowModalCstmW] = useState(false);
@@ -462,137 +421,98 @@ function Dashboard() {
     if (!selectedLetter) return true;
     return comodity.toUpperCase().startsWith(selectedLetter);
   });
+  
+  const itemsPerPage = 8;
+  const pages = useMemo(() => {
+    const result = [];
+    for (let i = 0; i < filteredComodities.length; i += itemsPerPage) {
+      result.push(filteredComodities.slice(i, i + itemsPerPage));
+    }
+    return result;
+  }, [filteredComodities]);
 
-  const handleNextCustomer = () => setCurrentCustomer((prev) => prev + 1);
-  const handlePrevCustomer = () => {
-    if (currentCustomer > 0) setCurrentCustomer((prev) => prev - 1);
-  };
 
   return (
-    <div className="container py-4">
+    <div className="container-fluid">
       <Row>
-        <Col md={8} style={{ flex: "0 0 70%" }}>
+        <Col md={12}>
           {errorLoadingGoods ? (
             <Alert variant="danger">{errorLoadingGoods}</Alert>
           ) : loadingGoods ? (
-            <div
-              className="d-flex justify-content-center align-items-center"
-              style={{ height: "85vh" }}
-            >
-              <Spinner
-                animation="border"
-                variant="primary"
-                role="status"
-                style={{ width: "4rem", height: "4rem" }}
-              />
+            <div className="d-flex justify-content-center align-items-center" style={{ height: "85vh" }}>
+              <Spinner animation="border" variant="primary" role="status" style={{ width: "4rem", height: "4rem" }} />
             </div>
           ) : (
-            <div
-              className="goods-list"
-              style={{
-                maxHeight: "80vh",
-                overflowY: "auto",
-                padding: "9px",
-              }}
+            <Swiper
+              modules={[Pagination]}
+              spaceBetween={20}
+              slidesPerView={1}
+              pagination={{ clickable: true }}
+              className="swiper-container"
             >
-              <Row className="g-2">
-                {filteredComodities.map((comodity) => {
-                  const representativeItem = groupedGoods[comodity]?.[0];
-                  return (
-                    <Col key={comodity} xs={12} sm={6} md={4} lg={6}>
-                      <Card className="h-100 shadow-sm border-0">
-                        <Card.Body>
-                          {representativeItem.img ? (
-                            <img
-                              src={representativeItem.img}
-                              alt={comodity}
-                              className="img-fluid itemimgcenter"
-                              onClick={() => handleShowModalCstmW(representativeItem.id_item, comodity)}
-                            />
-                          ) : (
-                            <CiImageOff size={150} className="text-secondary"
-                              style={{
-                                display: 'block',
-                                margin: '0 auto',
-                                width: '45%',
-                                height: 'auto',
-                                cursor: 'pointer'
-                              }}
-                              onClick={() => handleShowModalCstmW(representativeItem.id_item, comodity)}
-                            />
-                          )}
-                          <Card.Title className="fs-6 fw-bold text-center">
-                            {comodity}
-                          </Card.Title>
-                          <div className="d-flex flex-wrap gap-2 mt-2">
-                            {groupedGoods[comodity].map((sub, i) => {
-                              const isHighlighted = sub.weight_txt === "Kg";
-                              return (
-                                <Card
-                                  key={i}
-                                  className="text-center flex-fill border-0 shadow-sm overflow-hidden"
-                                  style={{
-                                    minWidth: "80px",
-                                    flex: "0 0 auto",
-                                    cursor: "pointer",
-                                    borderRadius: "8px",
-                                  }}
-                                  onClick={() =>
-                                    addToCart(
-                                      comodity,
-                                      sub.id_item,
-                                      sub.weight_Gr,
-                                      sub.price_per_Gr
-                                    )
-                                  }
-                                >
-                                  <div className="fw-bold"
-                                  style={{ backgroundColor: "#2c3e50", color: "white", padding: "5px 8px" }}>
-                                    {sub.weight_txt}
-                                  </div>
-                                  <div style={{ backgroundColor: isHighlighted ? "#2ecc71" : "white", color: isHighlighted ? "white" : "#2c3e50", padding: "8px 0" }}>
-                                    <div className="fw-bolder h2 m-0 lh-1">{sub.stock}</div>
-                                    <div className="small fw-bold">
-                                      {parseInt(sub.price_per_Gr) / 1000}
-                                    </div>
-                                  </div>
-                                </Card>
-                              );
-                            })}
-                          </div>
-                        </Card.Body>
-                      </Card>
-                    </Col>
-                  );
-                })}
-              </Row>
-            </div>
+              {pages.map((page, pageIndex) => (
+                <SwiperSlide key={pageIndex} className="goods-page-grid">
+                  <Row className="g-1 h-100"> 
+                    {page.map((comodity) => {
+                      const representativeItem = groupedGoods[comodity]?.[0];
+                      return (
+                        <Col key={comodity} xs={3} className="product-card-wrapper">
+                          <Card className="h-100 shadow-sm border-0 product-card-small">
+                            <Card.Body>
+                              <div className="item-image-container"> 
+                                {representativeItem.img ? (
+                                  <img
+                                    src={representativeItem.img}
+                                    alt={comodity}
+                                    className="img-fluid item-img-small"
+                                    onClick={() => handleShowModalCstmW(representativeItem.id_item, comodity)}
+                                  />
+                                ) : (
+                                  <CiImageOff size={80} className="text-secondary item-img-small-placeholder"
+                                    onClick={() => handleShowModalCstmW(representativeItem.id_item, comodity)}
+                                  />
+                                )}
+                              </div>
+                              <Card.Title className="product-title-small text-center">
+                                {comodity}
+                              </Card.Title>
+                              <div className="weight-buttons-container d-flex flex-wrap justify-content-center gap-1 mt-auto">
+                                {groupedGoods[comodity].map((sub, i) => {
+                                  const isHighlighted = sub.weight_txt === "Kg";
+                                  return (
+                                    <Card
+                                      key={i}
+                                      className="text-center flex-fill border-0 shadow-sm overflow-hidden weight-card-small"
+                                      onClick={() => addToCart(comodity, sub.id_item, sub.weight_Gr, sub.price_per_Gr)}
+                                    >
+                                      <div className="weight-card-header">
+                                        {sub.weight_txt}
+                                      </div>
+                                      <div className={`weight-card-body ${isHighlighted ? 'highlighted' : ''}`}>
+                                        <div className="fw-bolder h5 m-0 lh-1">{sub.stock}</div>
+                                        <div className="price-text">
+                                          {parseInt(sub.price_per_Gr) / 1000}
+                                        </div>
+                                      </div>
+                                    </Card>
+                                  );
+                                })}
+                              </div>
+                            </Card.Body>
+                          </Card>
+                        </Col>
+                      );
+                    })}
+                  </Row>
+                </SwiperSlide>
+              ))}
+            </Swiper>
           )}
-        </Col>
-
-        <Col md={3} style={{ flex: "0 0 30%" }}>
-          <CartSidebar
-            currentCustomer={currentCustomer}
-            cart={cart}
-            onRemove={removeFromCart}
-            onNext={handleNextCustomer}
-            onPrev={handlePrevCustomer}
-          />
         </Col>
       </Row>
 
-      <TransactionModal
-        show={showModal}
-        onHide={handleCloseModal}
-        currentCustomer={currentCustomer}
-      />
-
-      <CustomWeightModal
-        show={showModalCstmW}
-        onHide={handleCloseModalCstmW}
-        itemId={selectedIdItem}
-        itemName={selectedItemNm}
-      />
+      <TransactionModal show={showModal} onHide={handleCloseModal} currentCustomer={currentCustomer} />
+      <CustomWeightModal show={showModalCstmW} onHide={handleCloseModalCstmW} itemId={selectedIdItem} itemName={selectedItemNm} />
     </div>
   );
 }
