@@ -351,7 +351,7 @@ const TransactionModal = ({ show, onHide, currentCustomer }) => {
 
   const handleConfirmTransaction = async () => {
     const summaryData = {
-      subtotal, totalDiscount, voucherDiscount, idVoucher, grandTotal,
+      subtotal, totalDiscount, voucherDiscount, idVoucher, phoneNumber, grandTotal,
       paymentAmount: parseInt(paymentAmount, 10),
       change,
     };
