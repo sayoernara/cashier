@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useContext, useMemo, useEffect } from 'react';
-import { getGoodsPricePerGram } from './apis/api';
+import { getGoodsPricePerGram, getVoucherByphone } from './apis/api';
 import { Alert, Col, Row, Spinner, Card, Button, Modal, Form, InputGroup, ListGroup, Table } from 'react-bootstrap';
 import { BiCart } from 'react-icons/bi';
 import { CiImageOff } from 'react-icons/ci';
@@ -70,7 +70,7 @@ const CustomRangeSlider = ({ label, value, min, max, step, onChange, price, unit
     onChange(e);
     setTooltipActive(true);
   };
-  
+
   const handleMouseUp = () => {
     setTooltipActive(false);
     if (onRelease) {
@@ -187,14 +187,14 @@ const CustomWeightModal = ({ show, onHide, itemId, itemName }) => {
     const weightInGram = kgValue * 1000;
     if (weightInGram > 0 && priceKg > 0) {
       addToCart(itemName, itemId, weightInGram, priceKg);
-      setKgValue(0); 
+      setKgValue(0);
     }
   };
 
   const handleGramSliderRelease = () => {
     if (gramValue > 0 && priceGram > 0) {
       addToCart(itemName, itemId, gramValue, priceGram);
-      setGramValue(0); 
+      setGramValue(0);
     }
   };
 
@@ -278,12 +278,58 @@ const TransactionModal = ({ show, onHide, currentCustomer }) => {
     fetchTransaction, loadingSaveTransaction
   } = useContext(GoodsContext);
 
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [isCheckingMember, setIsCheckingMember] = useState(false);
+  const [memberInfo, setMemberInfo] = useState(null);
+  const [voucherDiscount, setVoucherDiscount] = useState(0);
+  const [idVoucher, setIdVoucher] = useState(null);
+
+  useEffect(() => {
+    if (!show) {
+      setPhoneNumber('');
+      setMemberInfo(null);
+      setVoucherDiscount(0);
+      setIdVoucher(null);
+    }
+  }, [show]);
+
   const DISCOUNT_STEP = 500;
 
   const subtotal = useMemo(() => resultCountPrice.reduce((sum, item) => sum + item.totalPrice, 0), [resultCountPrice]);
   const totalDiscount = useMemo(() => discounts.reduce((sum, discount) => sum + (discount || 0), 0), [discounts]);
-  const grandTotal = subtotal - totalDiscount;
+  const grandTotal = subtotal - totalDiscount - voucherDiscount;
   const change = parseInt(paymentAmount || 0, 10) - grandTotal;
+
+  const handleCheckMember = async () => {
+    if (!phoneNumber) {
+      Swal.fire('Error', 'Silakan masukkan nomor telepon.', 'error');
+      return;
+    }
+    setIsCheckingMember(true);
+    setMemberInfo(null);
+    setVoucherDiscount(0);
+    try {
+      const response = await getVoucherByphone(phoneNumber);
+      const voucher = response.data.voucher;
+      console.log('Response from getVoucherByphone:', voucher);
+
+      if (voucher && voucher.nominal) {
+        const nominalValue = parseInt(voucher.nominal, 10);
+        setMemberInfo(voucher);
+        setIdVoucher(voucher.id_voucher);
+        setVoucherDiscount(nominalValue);
+        Swal.fire('Voucher Ditemukan!', `Anda mendapatkan diskon sebesar Rp ${nominalValue.toLocaleString()}`, 'success');
+      } else {
+        Swal.fire('Info', 'Member tidak ditemukan atau tidak memiliki voucher aktif.', 'info');
+      }
+    } catch (error) {
+      console.error("Gagal cek member:", error);
+      setVoucherDiscount(0);
+      Swal.fire('Error', 'Gagal terhubung ke server atau member tidak ditemukan.', 'error');
+    } finally {
+      setIsCheckingMember(false);
+    }
+  };
 
   const handleDiscountChange = (index, operation, itemPrice) => {
     const newDiscounts = [...discounts];
@@ -305,7 +351,7 @@ const TransactionModal = ({ show, onHide, currentCustomer }) => {
 
   const handleConfirmTransaction = async () => {
     const summaryData = {
-      subtotal, totalDiscount, grandTotal,
+      subtotal, totalDiscount, voucherDiscount, idVoucher, grandTotal,
       paymentAmount: parseInt(paymentAmount, 10),
       change,
     };
@@ -370,8 +416,28 @@ const TransactionModal = ({ show, onHide, currentCustomer }) => {
         <ListGroup variant="flush">
           <ListGroup.Item className="d-flex justify-content-between align-items-center ps-0 pe-0"><span>Subtotal</span><span>Rp {subtotal.toLocaleString()}</span></ListGroup.Item>
           <ListGroup.Item className="d-flex justify-content-between align-items-center ps-0 pe-0"><span>Total Diskon</span><span className="text-danger">- Rp {totalDiscount.toLocaleString()}</span></ListGroup.Item>
+          {voucherDiscount > 0 && (
+            <ListGroup.Item className="d-flex justify-content-between align-items-center ps-0 pe-0">
+              <span>Discount Voucher</span>
+              <span className="text-danger">- Rp {voucherDiscount.toLocaleString()}</span>
+            </ListGroup.Item>
+          )}
           <ListGroup.Item className="d-flex justify-content-between align-items-center ps-0 pe-0 fw-bolder fs-5"><span>TOTAL AKHIR</span><span className="text-primary">Rp {grandTotal.toLocaleString()}</span></ListGroup.Item>
         </ListGroup>
+        <Form.Group className="mb-3">
+          <Form.Label className="fw-bold">Nomor Telepon Member (Opsional)</Form.Label>
+          <InputGroup>
+            <Form.Control
+              type="tel"
+              placeholder="Masukkan nomor telepon"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+            />
+            <Button variant="outline-primary" onClick={handleCheckMember} disabled={isCheckingMember}>
+              {isCheckingMember ? <Spinner as="span" animation="border" size="sm" /> : 'Cek Member'}
+            </Button>
+          </InputGroup>
+        </Form.Group>
         <Form.Group className="my-3">
           <Form.Label className="fw-bold">Nominal Bayar</Form.Label>
           <InputGroup>
@@ -421,7 +487,7 @@ function Dashboard() {
     if (!selectedLetter) return true;
     return comodity.toUpperCase().startsWith(selectedLetter);
   });
-  
+
   const itemsPerPage = 8;
   const pages = useMemo(() => {
     const result = [];
@@ -452,14 +518,14 @@ function Dashboard() {
             >
               {pages.map((page, pageIndex) => (
                 <SwiperSlide key={pageIndex} className="goods-page-grid">
-                  <Row className="g-1 h-100"> 
+                  <Row className="g-1 h-100">
                     {page.map((comodity) => {
                       const representativeItem = groupedGoods[comodity]?.[0];
                       return (
                         <Col key={comodity} xs={3} className="product-card-wrapper">
                           <Card className="h-100 shadow-sm border-0 product-card-small">
                             <Card.Body>
-                              <div className="item-image-container"> 
+                              <div className="item-image-container">
                                 {representativeItem.img ? (
                                   <img
                                     src={representativeItem.img}
