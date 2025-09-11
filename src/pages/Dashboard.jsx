@@ -48,10 +48,7 @@ const printReceipt = async (receiptData) => {
     receiptText += '\nTerima Kasih!\n\n';
     const cutCommand = '\x1D\x56\x42\x00';
     receiptText += cutCommand;
-
-    // Corrected line for proper encoding
-    const base64String = btoa(unescape(encodeURIComponent(receiptText)));
-
+    const base64String = btoa(receiptText);
     window.location.href = `rawbt:base64,${base64String}`;
   } catch (error) {
     console.error("Gagal mencetak struk:", error);
