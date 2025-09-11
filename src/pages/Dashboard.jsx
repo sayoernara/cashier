@@ -12,53 +12,94 @@ import { Pagination } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/pagination';
 
-// --- FUNGSI HELPER UNTUK CETAK ---
+// --- FUNGSI HELPER UNTUK CETAK (VERSI PERBAIKAN) ---
 const printReceipt = async (receiptData) => {
   try {
     const { items, summary, transactionNumber } = receiptData;
-    const line = '--------------------------------\n';
+    const receiptWidth = 32; // Lebar kertas dalam satuan karakter, sama seperti di PHP
+
+    // 1. Definisikan Perintah Printer (ESC/POS) seperti di PHP
+    const ESC = '\x1B'; // Escape character, sama dengan chr(27)
+    const GS = '\x1D';  // Group Separator, sama dengan chr(29)
+
+    const INIT_PRINTER = ESC + '@'; // Perintah inisialisasi printer
+    const BOLD_ON = ESC + 'E' + '\x01';
+    const BOLD_OFF = ESC + 'E' + '\x00';
+    // Perintah potong kertas, sama dengan $GS . "V" . chr(66) . chr(0)
+    const CUT_PAPER = GS + 'V' + '\x42' + '\x00';
+
+    // Helper function untuk membuat baris rata kiri-kanan (meniru `buatBaris` di PHP)
+    const createLine = (left, right) => {
+      const rightStr = String(right); // Pastikan right adalah string
+      const remainingSpace = receiptWidth - left.length - rightStr.length;
+      const spaces = ' '.repeat(Math.max(0, remainingSpace));
+      return `${left}${spaces}${rightStr}\n`;
+    };
+
+    // Helper function untuk membuat teks di tengah
+    const createCenterLine = (text) => {
+      const remainingSpace = receiptWidth - text.length;
+      const padLeft = Math.floor(remainingSpace / 2);
+      return ' '.repeat(padLeft) + text + '\n';
+    };
+
+    // 2. Bangun Teks Struk dengan Perintah ESC/POS
     let receiptText = '';
-    receiptText += '       Sayoernara\n';
-    receiptText += `No: ${transactionNumber}\n`;
-    receiptText += `Tgl: ${new Date().toLocaleString('id-ID')}\n`;
-    receiptText += line;
+    receiptText += INIT_PRINTER; // WAJIB: Inisialisasi printer di awal
+
+    // Header
+    receiptText += BOLD_ON;
+    receiptText += createCenterLine('Sayoernara');
+    receiptText += BOLD_OFF;
+    receiptText += createCenterLine('Terima Kasih!');
+    receiptText += '-'.repeat(receiptWidth) + '\n';
+
+    // Info Transaksi
+    receiptText += createLine(`No: ${transactionNumber}`, '');
+    receiptText += createLine(`Tgl: ${new Date().toLocaleString('id-ID')}`, '');
+    receiptText += '-'.repeat(receiptWidth) + '\n';
+
+    // Daftar Item
     items.forEach(item => {
       const priceAfterDiscount = item.totalPrice - (item.discount || 0);
       const itemName = `${item.comodity} (${item.totalWeight} gr)`;
       const itemPrice = `Rp ${priceAfterDiscount.toLocaleString('id-ID')}`;
-      const receiptWidth = 32;
-      const spaces = receiptWidth - itemName.length - itemPrice.length;
-      receiptText += `${itemName}${' '.repeat(Math.max(0, spaces))}${itemPrice}\n`;
+      receiptText += createLine(itemName, itemPrice);
     });
-    receiptText += line;
-    const formatSummaryLine = (label, value) => {
-      const receiptWidth = 32;
-      const formattedValue = `Rp ${value.toLocaleString('id-ID')}`;
-      const spaces = receiptWidth - label.length - formattedValue.length;
-      return `${label}${' '.repeat(Math.max(0, spaces))}${formattedValue}\n`;
-    }
-    receiptText += formatSummaryLine('Subtotal', summary.subtotal);
+    receiptText += '-'.repeat(receiptWidth) + '\n';
+
+    // Rincian Summary
+    receiptText += createLine('Subtotal', `Rp ${summary.subtotal.toLocaleString('id-ID')}`);
     if (summary.totalDiscount > 0) {
-      receiptText += formatSummaryLine('Diskon', -summary.totalDiscount);
+      receiptText += createLine('Diskon', `-Rp ${summary.totalDiscount.toLocaleString('id-ID')}`);
     }
-    receiptText += formatSummaryLine('Grand Total', summary.grandTotal);
-    receiptText += line;
-    receiptText += formatSummaryLine('Bayar', summary.paymentAmount);
-    receiptText += formatSummaryLine('Kembali', summary.change);
-    receiptText += '\nTerima Kasih!\n\n';
-    const cutCommand = '\x1D\x56\x42\x00';
-    receiptText += cutCommand;
-    const base64String = btoa(receiptText);
-    window.location.href = `rawbt:base64,${base64String}`;
+    receiptText += BOLD_ON;
+    receiptText += createLine('Grand Total', `Rp ${summary.grandTotal.toLocaleString('id-ID')}`);
+    receiptText += BOLD_OFF;
+    receiptText += createLine('Bayar', `Rp ${summary.paymentAmount.toLocaleString('id-ID')}`);
+    receiptText += createLine('Kembali', `Rp ${summary.change.toLocaleString('id-ID')}`);
+    receiptText += '\n\n';
+
+    // Perintah potong kertas di akhir
+    receiptText += CUT_PAPER;
+
+    // 3. Kirim ke RawBT dengan metode yang BENAR
+    // Gunakan encodeURIComponent (sama seperti urlencode di PHP)
+    const encodedText = encodeURIComponent(receiptText);
+
+    // Gunakan skema URL "rawbt:" (tanpa "base64,")
+    window.location.href = `rawbt:${encodedText}`;
+
   } catch (error) {
     console.error("Gagal mencetak struk:", error);
     Swal.fire({
       icon: 'error',
       title: 'Gagal Mencetak',
-      text: 'Pastikan aplikasi RawBT sudah terinstall dan berjalan dengan baik di perangkat Anda.',
+      text: 'Pastikan aplikasi RawBT sudah terinstall dan berjalan dengan baik.',
     });
   }
 };
+
 
 // --- KELOMPOK KOMPONEN UNTUK CUSTOMISASI BERAT (MODAL & SLIDER) ---
 const CustomRangeSlider = ({ label, value, min, max, step, onChange, price, unit, iconType, onRelease }) => {
