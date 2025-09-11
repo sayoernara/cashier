@@ -16,50 +16,42 @@ import 'swiper/css/pagination';
 const printReceipt = async (receiptData) => {
   try {
     const { items, summary, transactionNumber } = receiptData;
-    const receiptWidth = 32; // Lebar kertas dalam satuan karakter, sama seperti di PHP
+    const receiptWidth = 32;
 
-    // 1. Definisikan Perintah Printer (ESC/POS) seperti di PHP
-    const ESC = '\x1B'; // Escape character, sama dengan chr(27)
-    const GS = '\x1D';  // Group Separator, sama dengan chr(29)
+    const ESC = '\x1B';
+    const GS = '\x1D';
 
-    const INIT_PRINTER = ESC + '@'; // Perintah inisialisasi printer
+    const INIT_PRINTER = ESC + '@';
     const BOLD_ON = ESC + 'E' + '\x01';
     const BOLD_OFF = ESC + 'E' + '\x00';
-    // Perintah potong kertas, sama dengan $GS . "V" . chr(66) . chr(0)
     const CUT_PAPER = GS + 'V' + '\x42' + '\x00';
 
-    // Helper function untuk membuat baris rata kiri-kanan (meniru `buatBaris` di PHP)
     const createLine = (left, right) => {
-      const rightStr = String(right); // Pastikan right adalah string
+      const rightStr = String(right);
       const remainingSpace = receiptWidth - left.length - rightStr.length;
       const spaces = ' '.repeat(Math.max(0, remainingSpace));
       return `${left}${spaces}${rightStr}\n`;
     };
 
-    // Helper function untuk membuat teks di tengah
     const createCenterLine = (text) => {
       const remainingSpace = receiptWidth - text.length;
       const padLeft = Math.floor(remainingSpace / 2);
       return ' '.repeat(padLeft) + text + '\n';
     };
 
-    // 2. Bangun Teks Struk dengan Perintah ESC/POS
     let receiptText = '';
-    receiptText += INIT_PRINTER; // WAJIB: Inisialisasi printer di awal
+    receiptText += INIT_PRINTER;
 
-    // Header
     receiptText += BOLD_ON;
     receiptText += createCenterLine('Sayoernara');
     receiptText += BOLD_OFF;
     receiptText += createCenterLine('Terima Kasih!');
     receiptText += '-'.repeat(receiptWidth) + '\n';
 
-    // Info Transaksi
     receiptText += createLine(`No: ${transactionNumber}`, '');
     receiptText += createLine(`Tgl: ${new Date().toLocaleString('id-ID')}`, '');
     receiptText += '-'.repeat(receiptWidth) + '\n';
 
-    // Daftar Item
     items.forEach(item => {
       const priceAfterDiscount = item.totalPrice - (item.discount || 0);
       const itemName = `${item.comodity} (${item.totalWeight} gr)`;
@@ -68,7 +60,6 @@ const printReceipt = async (receiptData) => {
     });
     receiptText += '-'.repeat(receiptWidth) + '\n';
 
-    // Rincian Summary
     receiptText += createLine('Subtotal', `Rp ${summary.subtotal.toLocaleString('id-ID')}`);
     if (summary.totalDiscount > 0) {
       receiptText += createLine('Diskon', `-Rp ${summary.totalDiscount.toLocaleString('id-ID')}`);
@@ -80,14 +71,9 @@ const printReceipt = async (receiptData) => {
     receiptText += createLine('Kembali', `Rp ${summary.change.toLocaleString('id-ID')}`);
     receiptText += '\n\n';
 
-    // Perintah potong kertas di akhir
     receiptText += CUT_PAPER;
 
-    // 3. Kirim ke RawBT dengan metode yang BENAR
-    // Gunakan encodeURIComponent (sama seperti urlencode di PHP)
     const encodedText = encodeURIComponent(receiptText);
-
-    // Gunakan skema URL "rawbt:" (tanpa "base64,")
     window.location.href = `rawbt:${encodedText}`;
 
   } catch (error) {
@@ -246,7 +232,7 @@ const CustomWeightModal = ({ show, onHide, itemId, itemName }) => {
   };
 
   return (
-    <Modal show={show} onHide={onHide} centered size='lg'>
+    <Modal show={show} onHide={onHide} centered size='xl'>
       <Modal.Body>
         {loadingGoodsPrice && <div className="text-center"><Spinner animation="border" /></div>}
         {errorGoodsPrice && <Alert variant="danger">{errorGoodsPrice}</Alert>}
@@ -257,8 +243,7 @@ const CustomWeightModal = ({ show, onHide, itemId, itemName }) => {
             return (
               <Button
                 key={preset.value} variant="dark"
-                className="m-2 d-flex flex-column justify-content-center align-items-center"
-                style={{ width: '110px', height: '80px', borderRadius: '8px', padding: '10px 5px', lineHeight: '1.3' }}
+                className="m-2 d-flex flex-column justify-content-center align-items-center preset-weight-btn"
                 onClick={() => handlePresetAddToCart(preset.value, presetPrice)}
                 disabled={presetPrice === 0 || loadingGoodsPrice}
               >
@@ -352,7 +337,6 @@ const TransactionModal = ({ show, onHide, currentCustomer }) => {
     try {
       const response = await getVoucherByphone(phoneNumber);
       const voucher = response.data.voucher;
-      console.log('Response from getVoucherByphone:', voucher);
 
       if (voucher && voucher.nominal) {
         const nominalValue = parseInt(voucher.nominal, 10);
@@ -416,7 +400,7 @@ const TransactionModal = ({ show, onHide, currentCustomer }) => {
   };
 
   return (
-    <Modal show={show} onHide={onHide} centered size="lg">
+    <Modal show={show} onHide={onHide} centered size="xl">
       <Modal.Header closeButton>
         <Modal.Title>Konfirmasi Transaksi</Modal.Title>
       </Modal.Header>
@@ -529,14 +513,14 @@ function Dashboard() {
     return comodity.toUpperCase().startsWith(selectedLetter);
   });
 
-  const itemsPerPage = 8;
+  const itemsPerPage = 8; // Dikembalikan ke 8 karena defaultnya 4 kolom (2 baris)
   const pages = useMemo(() => {
     const result = [];
     for (let i = 0; i < filteredComodities.length; i += itemsPerPage) {
       result.push(filteredComodities.slice(i, i + itemsPerPage));
     }
     return result;
-  }, [filteredComodities]);
+  }, [filteredComodities, itemsPerPage]);
 
 
   return (
@@ -559,12 +543,12 @@ function Dashboard() {
             >
               {pages.map((page, pageIndex) => (
                 <SwiperSlide key={pageIndex} className="goods-page-grid">
-                  <Row className="g-1 h-100">
+                  <Row className="g-1">
                     {page.map((comodity) => {
                       const representativeItem = groupedGoods[comodity]?.[0];
                       return (
-                        <Col key={comodity} xs={3} className="product-card-wrapper">
-                          <Card className="h-100 shadow-sm border-0 product-card-small">
+                        <Col key={comodity} xs={6} sm={4} lg={3} className="product-card-wrapper">
+                          <Card className="shadow-sm border-0 product-card-small">
                             <Card.Body>
                               <div className="item-image-container">
                                 {representativeItem.img ? (
@@ -575,7 +559,7 @@ function Dashboard() {
                                     onClick={() => handleShowModalCstmW(representativeItem.id_item, comodity)}
                                   />
                                 ) : (
-                                  <CiImageOff size={80} className="text-secondary item-img-small-placeholder"
+                                  <CiImageOff size={100} className="text-secondary item-img-small-placeholder"
                                     onClick={() => handleShowModalCstmW(representativeItem.id_item, comodity)}
                                   />
                                 )}
@@ -583,13 +567,14 @@ function Dashboard() {
                               <Card.Title className="product-title-small text-center">
                                 {comodity}
                               </Card.Title>
-                              <div className="weight-buttons-container d-flex flex-wrap justify-content-center gap-1 mt-auto">
+                              {/* PERBAIKAN JARAK: mt-auto diubah menjadi mt-2 */}
+                              <div className="weight-buttons-container d-flex flex-wrap gap-1 mt-2">
                                 {groupedGoods[comodity].map((sub, i) => {
                                   const isHighlighted = sub.weight_txt === "Kg";
                                   return (
                                     <Card
                                       key={i}
-                                      className="text-center flex-fill border-0 shadow-sm overflow-hidden weight-card-small"
+                                      className={`text-center flex-fill border-0 shadow-sm overflow-hidden weight-card-small weight-btn-${sub.weight_txt.replace('/', '-')}`}
                                       onClick={() => addToCart(comodity, sub.id_item, sub.weight_Gr, sub.price_per_Gr)}
                                     >
                                       <div className="weight-card-header">

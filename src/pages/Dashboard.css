@@ -10,12 +10,12 @@ body,
 
 .modal-dialog {
   max-width: 800px; 
-  margin: 0rem auto; 
+  margin: 1.75rem auto; 
 }
 
 .modal-body {
-  padding-top: 0;
-  padding-bottom: 1; 
+  padding-top: 0.5rem;
+  padding-bottom: 1rem; 
 }
 
 .modal-body hr {
@@ -281,7 +281,6 @@ input[type=range].custom-slider-input::-moz-range-thumb {
 }
 
 .product-card-wrapper {
-  height: 50%; 
   padding-bottom: 0.25rem; 
 }
 
@@ -323,7 +322,7 @@ input[type=range].custom-slider-input::-moz-range-thumb {
 }
 
 .product-title-small {
-  font-size: 0.85rem;
+  font-size: 1rem;
   font-weight: bold;
   margin-bottom: 0.25rem;
   flex-shrink: 0;
@@ -353,7 +352,7 @@ input[type=range].custom-slider-input::-moz-range-thumb {
 .weight-card-body {
   background-color: white;
   color: #2c3e50;
-  padding: 5px 0;
+  padding: 10px 0;
   flex-grow: 1; 
   display: flex;
   flex-direction: column;
@@ -366,8 +365,120 @@ input[type=range].custom-slider-input::-moz-range-thumb {
   color: white;
 }
 
+.weight-card-body .h5 {
+  font-size: 1.35rem; 
+}
+
 .price-text {
-  font-size: 0.7rem;
+  font-size: 0.85rem;
   font-weight: bold;
   line-height: 1;
 }
+
+.preset-weight-btn {
+  width: 110px;
+  height: 80px;
+  border-radius: 8px;
+  padding: 10px 5px;
+  line-height: 1.3;
+}
+
+/* Media Query SANGAT SPESIFIK hanya untuk rentang layar tablet */
+@media (min-width: 1650px) and (max-width: 1750px) {
+  
+  /* 1. Paksa layout menjadi 6 kolom */
+  .product-card-wrapper {
+    width: 16.6666%;
+    flex: 0 0 auto;
+  }
+
+  /* 2. Terapkan semua gaya khusus untuk tablet */
+
+  /* MEMPERBESAR AREA GAMBAR */
+  .item-image-container {
+    height: 140px; /* Diperbesar dari 120px */
+  }
+
+  /* MEMPERBESAR JUDUL PRODUK */
+  .product-title-small {
+    font-size: 1.1rem; /* Diperbesar dari 1rem */
+    margin-bottom: 0.5rem; /* Menambah sedikit jarak di bawah */
+  }
+
+  /* MEMPERBESAR KONTEN DI DALAM WEIGHT BUTTONS */
+  .weight-card-header {
+    font-size: 0.8rem;
+    padding: 5px;
+  }
+
+  .weight-card-body {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .weight-card-body .h5 {
+    font-size: 1.4rem; /* Memperbesar angka stok */
+  }
+
+  .price-text {
+    font-size: 0.85rem; /* Memperbesar teks harga */
+  }
+  
+  /* --- Gaya lain yang sudah ada sebelumnya --- */
+
+  /* Custom Weight Modal Adjustments */
+  .preset-weight-btn {
+    width: 130px !important;
+    height: 90px !important;
+  }
+
+  .preset-weight-btn .fw-bold {
+    font-size: 1.2rem !important;
+  }
+
+  .preset-weight-btn small {
+    font-size: 1rem !important;
+  }
+
+  .added-item-card {
+    width: 110px;
+    height: 110px;
+    font-size: 1.4rem;
+  }
+
+  .total-summary-box {
+    width: 320px;
+    padding: 8px;
+  }
+
+  .total-summary-header {
+    font-size: 1.2rem;
+  }
+
+  .total-summary-value {
+    font-size: 1.5rem;
+  }
+
+  /* Transaction Modal Adjustments */
+  .modal-xl .table {
+    font-size: 1.1rem;
+  }
+
+  .modal-xl .list-group-item {
+     font-size: 1.1rem;
+  }
+
+   .modal-xl .fs-5 {
+    font-size: 1.4rem !important;
+  }
+}
+
+/* --- KODE UNTUK MENGUNCI URUTAN TOMBOL BERAT --- */
+.weight-buttons-container {
+  display: flex;
+}
+
+.weight-btn-Ons { order: 1; }
+.weight-btn-1-4 { order: 2; }
+.weight-btn-1-2 { order: 3; }
+.weight-btn-Kg { order: 4; }
