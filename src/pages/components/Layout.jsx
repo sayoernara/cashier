@@ -111,7 +111,7 @@ const CartPopover = ({ cart, onRemove, onCheckout, grandTotal }) => {
                 <div>
                   <strong className="d-block">{item.comodity}</strong>
                   <span className="text-muted">{item.totalWeight} gr</span>
-                  <strong className="d-block mt-1" style={{color: '#007bff'}}>
+                  <strong className="d-block mt-1" style={{ color: '#007bff' }}>
                     Rp {item.totalPrice.toLocaleString('id-ID')}
                   </strong>
                 </div>
@@ -125,13 +125,13 @@ const CartPopover = ({ cart, onRemove, onCheckout, grandTotal }) => {
       )}
       {cart.length > 0 && (
         <div style={{ padding: '1rem', borderTop: '1px solid #eee', backgroundColor: '#f8f9fa' }}>
-           <div className='d-flex justify-content-between align-items-center mb-3'>
-              <span className='fw-bold'>Total</span>
-              <span className='fw-bold fs-5'>Rp {grandTotal.toLocaleString('id-ID')}</span>
-           </div>
-           <Button variant="success" className="w-100 fw-bold" onClick={onCheckout}>
-             Lanjutkan ke Pembayaran
-           </Button>
+          <div className='d-flex justify-content-between align-items-center mb-3'>
+            <span className='fw-bold'>Total</span>
+            <span className='fw-bold fs-5'>Rp {grandTotal.toLocaleString('id-ID')}</span>
+          </div>
+          <Button variant="success" className="w-100 fw-bold" onClick={onCheckout}>
+            Lanjutkan ke Pembayaran
+          </Button>
         </div>
       )}
     </div>
@@ -379,12 +379,12 @@ function MainLayout() {
       setLoadingGoods(true);
       const result = await getGoodsList();
       setGoodsList(result.data.goods[0]);
-    } catch (err) { 
+    } catch (err) {
       setErrorLoadingGoods(err.message);
     } finally {
       setLoadingGoods(false);
     }
-  }, []); 
+  }, []);
 
   useEffect(() => {
     fetchGoods();
@@ -451,7 +451,7 @@ function MainLayout() {
 
   const isReturPage = location.pathname.startsWith('/retur');
   const activeCustomerForFooter = isReturPage ? tradeInCurrentCustomer : currentCustomer;
-  const cartForFooter = cart; 
+  const cartForFooter = cart;
   const tradeInCartForFooter = isReturPage ? getTradeInCartFromStorage(activeCustomerForFooter) : [];
   const badgeCount = cartForFooter.length + tradeInCartForFooter.length;
   const isButtonDisabled = badgeCount === 0;
@@ -479,7 +479,7 @@ function MainLayout() {
       }
     }
   };
-  
+
   const grandTotalInCart = cartForFooter.reduce((total, item) => total + item.totalPrice, 0);
 
   return (
@@ -569,29 +569,33 @@ function MainLayout() {
                 Next Customer &raquo;
               </Button>
             </div>
-            
+
             <div>
-              <Button
-                variant="success"
-                className="d-flex align-items-center gap-2"
-                onClick={() => setIsCartVisible(!isCartVisible)}
-                disabled={loadingGoods}
-              >
-                <BiCart size={24} />
-                <span className="fw-bold">
-                  Keranjang
-                </span>
-                {badgeCount > 0 && (
-                  <Badge pill bg="danger">
-                    {badgeCount}
-                  </Badge>
-                )}
-              </Button>
+              {!isReturPage ? (
+                <Button
+                  variant="success"
+                  className="d-flex align-items-center gap-2"
+                  onClick={() => setIsCartVisible(!isCartVisible)}
+                  disabled={loadingGoods}
+                  style={{ minWidth: "120px", justifyContent: "center" }}
+                >
+                  <BiCart size={24} />
+                  <span className="fw-bold">Keranjang</span>
+                  {badgeCount > 0 && (
+                    <Badge pill bg="danger">
+                      {badgeCount}
+                    </Badge>
+                  )}
+                </Button>
+              ) : (
+                // placeholder kosong dengan ukuran sama supaya gak geser
+                <div style={{ minWidth: "120px", height: "38px" }} />
+              )}
             </div>
 
           </div>
         </footer>
-        
+
         {isCartVisible && (
           <CartPopover
             cart={cartForFooter}
