@@ -387,7 +387,7 @@ function Retur() {
     // Context values
     const {
         groupedGoods, selectedLetter, loadingGoods,
-        tradeInCurrentCustomer,
+        tradeInCurrentCustomer, handleShowModal, handleCloseModal,
         tradeInCart, setTradeInCart, addToTradeInCart, removeFromTradeInCart,
         resultCountPrice, loadingCountPrice, errorCountPrice,
         discounts, setDiscounts,
@@ -978,7 +978,7 @@ function Retur() {
                                     <div className="summary-total" style={{ color: getResultColor() }}>
                                         Rp {Math.abs(transactionImpas).toLocaleString('en-US')}
                                     </div>
-                                    <Button id="btn-selesaikan-transaksi" onClick={() => setCurrentView('confirm')} disabled={!bisaSelesai}>
+                                    <Button id="btn-selesaikan-transaksi" onClick={() => handleShowModal()} disabled={!bisaSelesai}>
                                         <BiCheckCircle size={24} /> Selesaikan Transaksi
                                     </Button>
                                 </div>

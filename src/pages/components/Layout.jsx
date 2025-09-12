@@ -145,6 +145,7 @@ function MainLayout() {
   const loc = getStorageData().decryptloc;
   const navigate = useNavigate();
   const location = useLocation();
+  const isReturPage = location.pathname.startsWith('/retur');
 
   const [goodsList, setGoodsList] = useState([]);
   const [loadingGoods, setLoadingGoods] = useState(false);
@@ -267,8 +268,6 @@ function MainLayout() {
   }, [currentCustomer]);
 
   const handleShowModal = () => {
-    const isReturPage = location.pathname.startsWith('/retur');
-
     if (isReturPage) {
       const currentTradeInCart = getTradeInCartFromStorage(tradeInCurrentCustomer);
       const returSellCart = getReturSellCartFromStorage(tradeInCurrentCustomer);
@@ -449,7 +448,6 @@ function MainLayout() {
     fetchTransaction, loadingSaveTransaction, errorSaveTransaction, getReturSellCartFromStorage
   };
 
-  const isReturPage = location.pathname.startsWith('/retur');
   const activeCustomerForFooter = isReturPage ? tradeInCurrentCustomer : currentCustomer;
   const cartForFooter = cart;
   const tradeInCartForFooter = isReturPage ? getTradeInCartFromStorage(activeCustomerForFooter) : [];
