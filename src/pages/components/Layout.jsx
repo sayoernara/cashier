@@ -587,7 +587,22 @@ function MainLayout() {
                 </Button>
               ) : (
                 // placeholder kosong dengan ukuran sama supaya gak geser
-                <div style={{ minWidth: "120px", height: "38px" }} />
+                <Button
+                  variant="success"
+                  className="d-flex align-items-center gap-2"
+                  onClick={handleShowModal}
+                  disabled={isButtonDisabled || loadingGoods}
+                >
+                  <BiCart size={24} />
+                  <span className="fw-bold">
+                    Selesaikan Pesanan
+                  </span>
+                  {badgeCount > 0 && (
+                    <Badge pill bg="danger">
+                      {badgeCount}
+                    </Badge>
+                  )}
+                </Button>
               )}
             </div>
 
