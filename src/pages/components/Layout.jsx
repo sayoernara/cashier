@@ -563,7 +563,7 @@ function MainLayout() {
                   </NavLink>
                 </div>
               </div>
-              <Button variant="primary" size="sm" onClick={handleNextCustomer} disabled={activeCustomerForFooter >= 4}>
+              <Button variant="primary" size="sm" onClick={handleNextCustomer} disabled={activeCustomerForFooter >= 1}>
                 Next Customer &raquo;
               </Button>
             </div>
