@@ -344,7 +344,11 @@ function Retur() {
             transactionDate: new Date().toISOString(),
         };
 
+<<<<<<< HEAD
         console.log("Payload Transaksi:", transactionPayload);
+=======
+        // console.log("Payload Transaksi:", transactionPayload);
+>>>>>>> b85f9f1b5e4532289144efa61923f6f5e3ecd6b4
         fetchReturTransaction(transactionPayload)
     };
 
