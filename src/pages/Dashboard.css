@@ -13,6 +13,11 @@ body,
   margin: 1.75rem auto; 
 }
 
+.modal-dialog.modal-pos {
+  max-width: 850px;
+}
+
+
 .modal-body {
   padding-top: 0.5rem;
   padding-bottom: 1rem; 
@@ -383,96 +388,6 @@ input[type=range].custom-slider-input::-moz-range-thumb {
   line-height: 1.3;
 }
 
-/* Media Query SANGAT SPESIFIK hanya untuk rentang layar tablet */
-@media (min-width: 1650px) and (max-width: 1750px) {
-  
-  /* 1. Paksa layout menjadi 6 kolom */
-  .product-card-wrapper {
-    width: 16.6666%;
-    flex: 0 0 auto;
-  }
-
-  /* 2. Terapkan semua gaya khusus untuk tablet */
-
-  /* MEMPERBESAR AREA GAMBAR */
-  .item-image-container {
-    height: 140px; /* Diperbesar dari 120px */
-  }
-
-  /* MEMPERBESAR JUDUL PRODUK */
-  .product-title-small {
-    font-size: 1.1rem; /* Diperbesar dari 1rem */
-    margin-bottom: 0.5rem; /* Menambah sedikit jarak di bawah */
-  }
-
-  /* MEMPERBESAR KONTEN DI DALAM WEIGHT BUTTONS */
-  .weight-card-header {
-    font-size: 0.8rem;
-    padding: 5px;
-  }
-
-  .weight-card-body {
-    padding-top: 8px;
-    padding-bottom: 8px;
-  }
-
-  .weight-card-body .h5 {
-    font-size: 1.4rem; /* Memperbesar angka stok */
-  }
-
-  .price-text {
-    font-size: 0.85rem; /* Memperbesar teks harga */
-  }
-  
-  /* --- Gaya lain yang sudah ada sebelumnya --- */
-
-  /* Custom Weight Modal Adjustments */
-  .preset-weight-btn {
-    width: 130px !important;
-    height: 90px !important;
-  }
-
-  .preset-weight-btn .fw-bold {
-    font-size: 1.2rem !important;
-  }
-
-  .preset-weight-btn small {
-    font-size: 1rem !important;
-  }
-
-  .added-item-card {
-    width: 110px;
-    height: 110px;
-    font-size: 1.4rem;
-  }
-
-  .total-summary-box {
-    width: 320px;
-    padding: 8px;
-  }
-
-  .total-summary-header {
-    font-size: 1.2rem;
-  }
-
-  .total-summary-value {
-    font-size: 1.5rem;
-  }
-
-  /* Transaction Modal Adjustments */
-  .modal-xl .table {
-    font-size: 1.1rem;
-  }
-
-  .modal-xl .list-group-item {
-     font-size: 1.1rem;
-  }
-
-   .modal-xl .fs-5 {
-    font-size: 1.4rem !important;
-  }
-}
-
 /* --- KODE UNTUK MENGUNCI URUTAN TOMBOL BERAT --- */
 .weight-buttons-container {
   display: flex;
@@ -482,3 +397,330 @@ input[type=range].custom-slider-input::-moz-range-thumb {
 .weight-btn-1-4 { order: 2; }
 .weight-btn-1-2 { order: 3; }
 .weight-btn-Kg { order: 4; }
+
+
+/* === STYLES FOR FLEXIBLE WIDTH TRANSACTION CARDS === */
+
+.transaction-items-container {
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 10px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  gap: 12px; /* Jarak antar kartu dikembalikan agar tidak terlalu rapat */
+  min-height: 210px;
+  align-items: flex-start; /* Jaga agar kartu tetap rapi di atas jika tingginya berbeda */
+}
+
+/* Scrollbar styling */
+.transaction-items-container::-webkit-scrollbar {
+  height: 8px;
+}
+.transaction-items-container::-webkit-scrollbar-thumb {
+  background: #adb5bd;
+  border-radius: 4px;
+}
+.transaction-items-container::-webkit-scrollbar-track {
+  background: #f1f3f5;
+}
+
+.cart-item-card {
+  min-width: 150px;
+  max-width: 250px;
+  flex-shrink: 0;
+  background-color: #ffffff;
+  border-radius: 8px;
+  padding: 8px;
+  text-align: center;
+  border: 2px solid black;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  position: relative;
+  font-family: sans-serif;
+}
+
+.cart-item-card .item-name {
+  font-weight: 700;
+  font-size: 0.9rem;
+  background-color: black;
+  color: white;
+  padding: 4px 5px;
+  border-radius: 5px;
+  margin: 0;
+  line-height: 1.3;
+  white-space: normal;
+  word-break: break-word; 
+}
+
+.cart-item-card .item-details {
+  font-size: 0.8rem;
+  color: #343a40;
+  font-weight: 700;
+  margin-top: 3px;
+}
+
+.cart-item-card .item-price {
+  font-weight: 700;
+  font-size: 1.0rem;
+  background-color: #28a745;
+  color: white;
+  padding: 3px 4px;
+  border-radius: 5px;
+  margin-top: 3px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.item-card-divider {  
+  border-top: 2px dashed #ced4da;
+  margin: 8px 0;
+}
+
+.cart-item-discount {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.cart-item-discount .label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: white;
+  background-color: black;
+  padding: 2px 10px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.cart-item-discount .controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  width: 100%;
+  margin-top: 3px;
+}
+
+.cart-item-discount .diskon-level {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: black;
+  padding: 0 5px;
+}
+
+.discount-btn {
+  background-color: #f1f3f5;
+  border: 1px solid #ced4da;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 1.3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: background-color 0.2s;
+  flex-shrink: 0;
+}
+
+.discount-btn:hover {
+  background-color: #dee2e6;
+}
+
+.discount-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.final-discount-amount {
+  background-color: #dc3545;
+  color: white;
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 2px 6px;
+  border-radius: 5px;
+  margin-top: 5px;
+}
+
+.btn-remove-from-modal {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    width: 24px;
+    height: 24px;
+    background-color: #dc3545;
+    color: white;
+    border: 2px solid white;
+    border-radius: 50%;
+    font-size: 1rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    transition: transform 0.2s ease;
+    z-index: 10;
+}
+
+.btn-remove-from-modal:hover {
+    transform: scale(1.1);
+}
+
+@keyframes fading-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.fading-in {
+  animation: fading-in 0.3s ease-out;
+}
+
+/* === KODE UNTUK POS MODAL === */
+
+.pos-layout {
+  display: flex;
+  gap: 1rem;
+  background-color: #f8f9fa;
+}
+
+.pos-numpad-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.pos-summary-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.numpad-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  flex-grow: 1;
+}
+
+.numpad-btn {
+  border-radius: 8px;
+  font-size: 1.75rem;
+  font-weight: 500;
+  height: 80px;
+  border: 1px solid #dee2e6;
+  background-color: #fff;
+  color: #212529;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  transition: all 0.2s ease-in-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  padding: 0.5rem;
+}
+
+.numpad-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  border-color: #adb5bd;
+}
+
+.numpad-btn.btn-clear {
+  margin-top: 0.75rem;
+  background-color: #fff1f2;
+  color: #e64980;
+  border-color: #ffb6c1;
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.numpad-btn.btn-confirm {
+  margin-top: auto;
+  background-color: #28a745;
+  color: white;
+  border-color: #28a745;
+  height: 80px;
+  font-size: 1.3rem;
+  font-weight: bold;
+}
+
+.summary-group-box {
+  background-color: #ffffff;
+  border: 2px solid #000000;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 10px;
+  font-family: sans-serif;
+}
+
+.summary-group-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+}
+
+.summary-group-row:last-child {
+  margin-bottom: 0;
+}
+
+.summary-group-row.grand-total-row {
+  font-weight: bold;
+  font-size: 1.2rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 2px dashed #dee2e6;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #ffffff;
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 10px;
+  font-family: sans-serif;
+  transition: border-color 0.2s ease-in-out;
+}
+
+.summary-label {
+  font-weight: bold;
+  font-size: 1rem;
+  color: #495057;
+}
+
+.summary-value {
+  font-weight: bold;
+  font-size: 1.1rem;
+  text-align: right;
+}
+
+.summary-value.discount {
+  color: #dc3545;
+}
+
+.summary-item.input-item {
+  padding: 8px 16px;
+  cursor: pointer;
+}
+
+.summary-input {
+  text-align: right;
+  font-weight: bold;
+  font-size: 1.2rem;
+  color: #212529;
+  width: 100%;
+}
+
+.summary-input.phone {
+  font-size: 1rem;
+}

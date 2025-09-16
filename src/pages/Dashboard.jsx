@@ -1,7 +1,6 @@
 import React, { useCallback, useState, useContext, useMemo, useEffect } from 'react';
 import { getGoodsPricePerGram, getVoucherByphone } from './apis/api';
-import { Alert, Col, Row, Spinner, Card, Button, Modal, Form, InputGroup, ListGroup, Table } from 'react-bootstrap';
-import { BiCart } from 'react-icons/bi';
+import { Alert, Col, Row, Spinner, Card, Button, Modal, Form } from 'react-bootstrap';
 import { CiImageOff } from 'react-icons/ci';
 import { GoodsContext } from './components/GoodsContext';
 import { FaShoppingBag, FaBalanceScale } from 'react-icons/fa';
@@ -12,7 +11,7 @@ import { Pagination } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/pagination';
 
-// --- FUNGSI HELPER UNTUK CETAK (VERSI PERBAIKAN) ---
+// --- FUNGSI HELPER UNTUK CETAK ---
 const printReceipt = async (receiptData) => {
   try {
     const { items, summary, transactionNumber } = receiptData;
@@ -297,7 +296,7 @@ const CustomWeightModal = ({ show, onHide, itemId, itemName }) => {
 };
 
 // --- KOMPONEN MODAL TRANSAKSI ---
-const TransactionModal = ({ show, onHide, currentCustomer }) => {
+const TransactionModal = ({ show, onHide }) => {
   const {
     resultCountPrice, loadingCountPrice, errorCountPrice,
     discounts, setDiscounts, paymentAmount, setPaymentAmount,
@@ -306,14 +305,18 @@ const TransactionModal = ({ show, onHide, currentCustomer }) => {
 
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isCheckingMember, setIsCheckingMember] = useState(false);
-  const [memberInfo, setMemberInfo] = useState(null);
   const [voucherDiscount, setVoucherDiscount] = useState(0);
   const [idVoucher, setIdVoucher] = useState(null);
+  const [activeInput, setActiveInput] = useState('payment'); // 'payment' or 'phone'
 
   useEffect(() => {
-    if (!show) {
+    if (show) {
+      setActiveInput('payment');
+      if (!paymentAmount) {
+        setPaymentAmount('0');
+      }
+    } else {
       setPhoneNumber('');
-      setMemberInfo(null);
       setVoucherDiscount(0);
       setIdVoucher(null);
     }
@@ -326,21 +329,47 @@ const TransactionModal = ({ show, onHide, currentCustomer }) => {
   const grandTotal = subtotal - totalDiscount - voucherDiscount;
   const change = parseInt(paymentAmount || 0, 10) - grandTotal;
 
+  const handleNumpadInput = (value) => {
+    if (activeInput === 'payment') {
+      setPaymentAmount((prev) => (prev === '0' && value !== '000' ? value : prev + value));
+    } else {
+      setPhoneNumber((prev) => prev + value);
+    }
+  };
+
+  const handleBackspace = () => {
+    if (activeInput === 'payment') {
+      setPaymentAmount((prev) => prev.slice(0, -1) || '0');
+    } else {
+      setPhoneNumber((prev) => prev.slice(0, -1));
+    }
+  };
+  
+  const handleDiscountChange = (index, operation, itemPrice) => {
+    const newDiscounts = [...discounts];
+    const currentDiscount = parseInt(newDiscounts[index] || 0, 10);
+    let newValue = currentDiscount;
+    if (operation === 'increase') {
+      newValue = Math.min(currentDiscount + DISCOUNT_STEP, parseInt(itemPrice, 10));
+    } else if (operation === 'decrease') {
+      newValue = Math.max(currentDiscount - DISCOUNT_STEP, 0);
+    }
+    newDiscounts[index] = newValue;
+    setDiscounts(newDiscounts);
+  };
+
   const handleCheckMember = async () => {
     if (!phoneNumber) {
       Swal.fire('Error', 'Silakan masukkan nomor telepon.', 'error');
       return;
     }
     setIsCheckingMember(true);
-    setMemberInfo(null);
     setVoucherDiscount(0);
     try {
       const response = await getVoucherByphone(phoneNumber);
       const voucher = response.data.voucher;
-
       if (voucher && voucher.nominal) {
         const nominalValue = parseInt(voucher.nominal, 10);
-        setMemberInfo(voucher);
         setIdVoucher(voucher.id_voucher);
         setVoucherDiscount(nominalValue);
         Swal.fire('Voucher Ditemukan!', `Anda mendapatkan diskon sebesar Rp ${nominalValue.toLocaleString()}`, 'success');
@@ -356,31 +385,16 @@ const TransactionModal = ({ show, onHide, currentCustomer }) => {
     }
   };
 
-  const handleDiscountChange = (index, operation, itemPrice) => {
-    const newDiscounts = [...discounts];
-    const currentDiscount = parseInt(newDiscounts[index] || 0, 10);
-    let newValue = currentDiscount;
-    if (operation === 'increase') {
-      newValue = Math.min(currentDiscount + DISCOUNT_STEP, parseInt(itemPrice, 10));
-    } else if (operation === 'decrease') {
-      newValue = Math.max(currentDiscount - DISCOUNT_STEP, 0);
-    }
-    newDiscounts[index] = newValue;
-    setDiscounts(newDiscounts);
-  };
-
-  const handlePaymentChange = (e) => {
-    const value = e.target.value.replace(/[^0-9]/g, "");
-    setPaymentAmount(value);
-  };
-
   const handleConfirmTransaction = async () => {
+    if (change < 0 || !paymentAmount) {
+      Swal.fire('Pembayaran Kurang', 'Jumlah uang yang dibayarkan kurang dari Grand Total.', 'warning');
+      return;
+    }
     const summaryData = {
       subtotal, totalDiscount, voucherDiscount, idVoucher, phoneNumber, grandTotal,
       paymentAmount: parseInt(paymentAmount, 10),
       change,
     };
-
     try {
       const response = await fetchTransaction(summaryData);
       if (response && response.success) {
@@ -390,108 +404,144 @@ const TransactionModal = ({ show, onHide, currentCustomer }) => {
           transactionNumber: response.number,
         };
         await printReceipt(receiptData);
+        onHide();
       } else {
-        Swal.fire({ icon: 'error', title: 'Transaksi Gagal', text: response.message || 'Gagal menyimpan transaksi, struk tidak akan dicetak.' });
+        Swal.fire({ icon: 'error', title: 'Transaksi Gagal', text: response.message || 'Gagal menyimpan transaksi.' });
       }
     } catch (error) {
       console.error("Error saat menyimpan transaksi:", error);
-      Swal.fire({ icon: 'error', title: 'Koneksi Gagal', text: 'Tidak dapat menyimpan transaksi ke server. Silakan coba lagi.' });
+      Swal.fire({ icon: 'error', title: 'Koneksi Gagal', text: 'Tidak dapat menyimpan transaksi ke server.' });
     }
   };
 
+  const numpadKeys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '000', '0', '500'];
+
+  const renderConfirmButtonText = () => {
+    if (change >= 0 && paymentAmount !== '0' && grandTotal > 0) {
+      return (
+        <div className="d-flex flex-column lh-1">
+          Selesaikan Transaksi
+          <span className="fw-normal mt-1" style={{fontSize: '1rem'}}>Kembalian Rp {change.toLocaleString('id-ID')}</span>
+        </div>
+      );
+    }
+    return 'Selesaikan Transaksi';
+  };
+
   return (
-    <Modal show={show} onHide={onHide} centered size="xl">
-      <Modal.Header closeButton>
-        <Modal.Title>Konfirmasi Transaksi</Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        <p>Rincian belanja untuk <strong>Customer #{currentCustomer + 1}</strong>:</p>
+    <Modal show={show} onHide={onHide} centered size="xl" dialogClassName="modal-pos">
+      <Modal.Body className="p-4">
         {loadingCountPrice ? (
           <div className="d-flex justify-content-center p-5"><Spinner animation="border" variant="primary" /></div>
         ) : errorCountPrice ? (
           <Alert variant="danger">{errorCountPrice}</Alert>
         ) : (
-          <Table responsive>
-            <thead><tr className="table-light"><th>Produk</th><th className="text-center">Diskon (Rp)</th><th className="text-end">Harga Akhir</th></tr></thead>
-            <tbody>
-              {resultCountPrice.map((item, idx) => {
-                const currentDiscount = discounts[idx] || 0;
-                const priceAfterDiscount = item.totalPrice - currentDiscount;
-                return (
-                  <tr key={idx} className="align-middle">
-                    <td><strong>{item.comodity}</strong><div className="text-muted small">{item.totalWeight} gr</div></td>
-                    <td className="text-center">
-                      <InputGroup style={{ minWidth: '150px', margin: 'auto' }}>
-                        <Button variant="outline-danger" onClick={() => handleDiscountChange(idx, 'decrease')} disabled={currentDiscount === 0}>-</Button>
-                        <Form.Control className="text-center fw-bold" value={currentDiscount.toLocaleString('id-ID')} readOnly />
-                        <Button variant="outline-success" onClick={() => handleDiscountChange(idx, 'increase', item.totalPrice)} disabled={currentDiscount >= item.totalPrice}>+</Button>
-                      </InputGroup>
-                    </td>
-                    <td className="text-end">
-                      <span className="fw-bold fs-6">Rp {priceAfterDiscount.toLocaleString('id-ID')}</span>
-                      {currentDiscount > 0 && <div className="text-muted small text-decoration-line-through">Rp {item.totalPrice.toLocaleString('id-ID')}</div>}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </Table>
-        )}
-        <hr />
-        <ListGroup variant="flush">
-          <ListGroup.Item className="d-flex justify-content-between align-items-center ps-0 pe-0"><span>Subtotal</span><span>Rp {subtotal.toLocaleString()}</span></ListGroup.Item>
-          <ListGroup.Item className="d-flex justify-content-between align-items-center ps-0 pe-0"><span>Total Diskon</span><span className="text-danger">- Rp {totalDiscount.toLocaleString()}</span></ListGroup.Item>
-          {voucherDiscount > 0 && (
-            <ListGroup.Item className="d-flex justify-content-between align-items-center ps-0 pe-0">
-              <span>Discount Voucher</span>
-              <span className="text-danger">- Rp {voucherDiscount.toLocaleString()}</span>
-            </ListGroup.Item>
-          )}
-          <ListGroup.Item className="d-flex justify-content-between align-items-center ps-0 pe-0 fw-bolder fs-5"><span>TOTAL AKHIR</span><span className="text-primary">Rp {grandTotal.toLocaleString()}</span></ListGroup.Item>
-        </ListGroup>
-        <Form.Group className="mb-3">
-          <Form.Label className="fw-bold">Nomor Telepon Member (Opsional)</Form.Label>
-          <InputGroup>
-            <Form.Control
-              type="tel"
-              placeholder="Masukkan nomor telepon"
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
-            />
-            <Button variant="outline-primary" onClick={handleCheckMember} disabled={isCheckingMember}>
-              {isCheckingMember ? <Spinner as="span" animation="border" size="sm" /> : 'Cek Member'}
-            </Button>
-          </InputGroup>
-        </Form.Group>
-        <Form.Group className="my-3">
-          <Form.Label className="fw-bold">Nominal Bayar</Form.Label>
-          <InputGroup>
-            <InputGroup.Text>Rp</InputGroup.Text>
-            <Form.Control type="text" value={paymentAmount ? parseInt(paymentAmount, 10).toLocaleString('id-ID') : ""} onChange={handlePaymentChange} placeholder="Masukkan jumlah uang pembayaran" size="lg" autoFocus />
-          </InputGroup>
-        </Form.Group>
-        {paymentAmount && change >= 0 && (
-          <div className="alert alert-success d-flex justify-content-between align-items-center fw-bolder fs-5">
-            <span>Kembalian</span><span>Rp {change.toLocaleString()}</span>
+          <div className="transaction-items-container">
+            {resultCountPrice.map((item, idx) => {
+              const currentDiscount = discounts[idx] || 0;
+              const priceAfterDiscount = item.totalPrice - currentDiscount;
+
+              // --- LOGIKA BARU UNTUK DISPLAY KG/GR ---
+              const isKg = item.totalWeight >= 1000;
+              const displayWeight = isKg ? item.totalWeight / 1000 : item.totalWeight;
+              const displayUnit = isKg ? 'kg' : 'gr';
+              const pricePerUnit = isKg ? item.totalPrice / (item.totalWeight / 1000) : item.totalPrice / item.totalWeight;
+
+              return (
+                <div key={idx} className="cart-item-card fading-in">
+                  <div className="btn-remove-from-modal">&times;</div>
+                  <div className="item-name">{item.comodity}</div>
+                  <div className="item-details">
+                    {`${displayWeight.toLocaleString('id-ID')} ${displayUnit} × ${pricePerUnit.toLocaleString('id-ID')}`}
+                  </div>
+                  <div className="item-price">{priceAfterDiscount.toLocaleString('id-ID')}</div>
+                  <div className="item-card-divider"></div>
+                  <div className="cart-item-discount">
+                    <div className="label">Diskon</div>
+                    <div className="controls">
+                      <button className="discount-btn" onClick={() => handleDiscountChange(idx, 'decrease')} disabled={currentDiscount === 0}>-</button>
+                      <div className="diskon-level">×{currentDiscount / DISCOUNT_STEP}</div>
+                      <button className="discount-btn" onClick={() => handleDiscountChange(idx, 'increase', item.totalPrice)} disabled={currentDiscount >= item.totalPrice}>+</button>
+                    </div>
+                     <div className="final-discount-amount">- {currentDiscount.toLocaleString('id-ID')}</div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
+        <hr />
+        <div className="pos-layout">
+          <div className="pos-numpad-column">
+            <div className="numpad-grid">
+              {numpadKeys.map((key) => (
+                <Button key={key} className="numpad-btn" onClick={() => handleNumpadInput(key)}>
+                  {key}
+                </Button>
+              ))}
+            </div>
+            <Button className="numpad-btn btn-clear" onClick={handleBackspace}>
+              Hapus
+            </Button>
+          </div>
+          <div className="pos-summary-column">
+            <div className="summary-group-box">
+              <div className="summary-group-row">
+                <span className="summary-label">Subtotal</span>
+                <span className="summary-value">{subtotal.toLocaleString('id-ID')}</span>
+              </div>
+              <div className="summary-group-row">
+                <span className="summary-label">Diskon Item</span>
+                <span className="summary-value discount">- {totalDiscount.toLocaleString('id-ID')}</span>
+              </div>
+              <div className="summary-group-row grand-total-row">
+                <span className="summary-label">Grand Total</span>
+                <span className="summary-value">{grandTotal.toLocaleString('id-ID')}</span>
+              </div>
+            </div>
+
+            <div className="summary-item input-item" onClick={() => setActiveInput('payment')}>
+              <label className="summary-label">Uang Dibayar</label>
+              <div className="summary-input">
+                {parseInt(paymentAmount || 0, 10).toLocaleString('id-ID')}
+              </div>
+            </div>
+            
+            <div className="summary-item input-item" onClick={() => setActiveInput('phone')}>
+              <label className="summary-label">No Telepon</label>
+              <div className="summary-input phone">
+                {phoneNumber || '-'}
+              </div>
+            </div>
+
+            <div className="summary-item">
+              <span className="summary-label">Diskon Voucher</span>
+              <span className="summary-value discount">
+                - {voucherDiscount > 0 ? voucherDiscount.toLocaleString('id-ID') : '0'}
+              </span>
+            </div>
+            
+            <Button 
+                className="numpad-btn btn-confirm" 
+                onClick={handleConfirmTransaction}
+                disabled={loadingSaveTransaction}
+            >
+              {loadingSaveTransaction ? <Spinner as="span" animation="border" size="sm" /> : renderConfirmButtonText()}
+            </Button>
+          </div>
+        </div>
       </Modal.Body>
-      <Modal.Footer>
-        <Button variant="secondary" onClick={onHide}>Tutup</Button>
-        <Button variant="primary" onClick={handleConfirmTransaction} disabled={change < 0 || !paymentAmount || loadingSaveTransaction}>
-          {loadingSaveTransaction ? (<><Spinner as="span" animation="border" size="sm" /> Menyimpan...</>) : 'Konfirmasi & Cetak Struk'}
-        </Button>
-      </Modal.Footer>
     </Modal>
   );
 };
 
+
 // --- KOMPONEN UTAMA DASHBOARD ---
 function Dashboard() {
   const {
-    groupedGoods, selectedLetter, loadingGoods, errorLoadingGoods,
+    groupedGoods, loadingGoods, errorLoadingGoods,
     addToCart,
-    showModal, handleCloseModal, currentCustomer
+    showModal, handleCloseModal
   } = useContext(GoodsContext);
 
   const [showModalCstmW, setShowModalCstmW] = useState(false);
@@ -508,19 +558,16 @@ function Dashboard() {
     setShowModalCstmW(false);
   };
 
-  const filteredComodities = Object.keys(groupedGoods).filter((comodity) => {
-    if (!selectedLetter) return true;
-    return comodity.toUpperCase().startsWith(selectedLetter);
-  });
+  const filteredComodities = Object.keys(groupedGoods);
 
-  const itemsPerPage = 8; // Dikembalikan ke 8 karena defaultnya 4 kolom (2 baris)
+  const itemsPerPage = 8;
   const pages = useMemo(() => {
     const result = [];
     for (let i = 0; i < filteredComodities.length; i += itemsPerPage) {
       result.push(filteredComodities.slice(i, i + itemsPerPage));
     }
     return result;
-  }, [filteredComodities, itemsPerPage]);
+  }, [filteredComodities]);
 
 
   return (
@@ -567,7 +614,6 @@ function Dashboard() {
                               <Card.Title className="product-title-small text-center">
                                 {comodity}
                               </Card.Title>
-                              {/* PERBAIKAN JARAK: mt-auto diubah menjadi mt-2 */}
                               <div className="weight-buttons-container d-flex flex-wrap gap-1 mt-2">
                                 {groupedGoods[comodity].map((sub, i) => {
                                   const isHighlighted = sub.weight_txt === "Kg";
@@ -603,7 +649,7 @@ function Dashboard() {
         </Col>
       </Row>
 
-      <TransactionModal show={showModal} onHide={handleCloseModal} currentCustomer={currentCustomer} />
+      <TransactionModal show={showModal} onHide={handleCloseModal} />
       <CustomWeightModal show={showModalCstmW} onHide={handleCloseModalCstmW} itemId={selectedIdItem} itemName={selectedItemNm} />
     </div>
   );

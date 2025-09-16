@@ -81,63 +81,6 @@ const headerStyles = {
   }
 };
 
-// --- KOMPONEN POPOVER KERANJANG BELANJA ---
-const CartPopover = ({ cart, onRemove, onCheckout, grandTotal }) => {
-  return (
-    <div style={{
-      position: 'absolute',
-      bottom: '80px',
-      right: '20px',
-      width: '380px',
-      maxHeight: 'calc(100vh - 100px)',
-      backgroundColor: 'white',
-      borderRadius: '12px',
-      boxShadow: '0 5px 20px rgba(0,0,0,0.2)',
-      zIndex: 1100,
-      display: 'flex',
-      flexDirection: 'column',
-      border: '1px solid #ddd'
-    }}>
-      <div style={{ padding: '1rem', borderBottom: '1px solid #eee' }}>
-        <h5 className="mb-0 fw-bold">Keranjang Belanja</h5>
-      </div>
-      {cart.length === 0 ? (
-        <p className="text-muted small fst-italic m-3 text-center">Belum ada item</p>
-      ) : (
-        <div style={{ flex: 1, overflowY: "auto", padding: '0.5rem 1rem' }}>
-          <ul className="list-group list-group-flush small rounded">
-            {[...cart].reverse().map((item, index) => (
-              <li key={index} className="list-group-item d-flex justify-content-between align-items-center px-0 py-2">
-                <div>
-                  <strong className="d-block">{item.comodity}</strong>
-                  <span className="text-muted">{item.totalWeight} gr</span>
-                  <strong className="d-block mt-1" style={{ color: '#007bff' }}>
-                    Rp {item.totalPrice.toLocaleString('id-ID')}
-                  </strong>
-                </div>
-                <Button variant="outline-danger" size="sm" onClick={() => onRemove(item.comodity)}>
-                  Hapus
-                </Button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {cart.length > 0 && (
-        <div style={{ padding: '1rem', borderTop: '1px solid #eee', backgroundColor: '#f8f9fa' }}>
-          <div className='d-flex justify-content-between align-items-center mb-3'>
-            <span className='fw-bold'>Total</span>
-            <span className='fw-bold fs-5'>Rp {grandTotal.toLocaleString('id-ID')}</span>
-          </div>
-          <Button variant="success" className="w-100 fw-bold" onClick={onCheckout}>
-            Lanjutkan ke Pembayaran
-          </Button>
-        </div>
-      )}
-    </div>
-  );
-};
-
 // --- KOMPONEN UTAMA LAYOUT ---
 function MainLayout() {
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -166,7 +109,6 @@ function MainLayout() {
   const [loadingSaveTransaction, setLoadingSaveTransaction] = useState(false);
   const [errorSaveTransaction, setErrorSaveTransaction] = useState(null);
   const [showHistoryTransactionModal, setShowHistoryTransactionModal] = useState(false);
-  const [isCartVisible, setIsCartVisible] = useState(false);
 
   const getCartFromStorage = (customerIndex) => {
     const carts = JSON.parse(localStorage.getItem("carts") || "{}");
@@ -569,57 +511,26 @@ function MainLayout() {
             </div>
 
             <div>
-              {!isReturPage ? (
-                <Button
-                  variant="success"
-                  className="d-flex align-items-center gap-2"
-                  onClick={() => setIsCartVisible(!isCartVisible)}
-                  disabled={loadingGoods}
-                  style={{ minWidth: "120px", justifyContent: "center" }}
-                >
-                  <BiCart size={24} />
-                  <span className="fw-bold">Keranjang</span>
-                  {badgeCount > 0 && (
-                    <Badge pill bg="danger">
-                      {badgeCount}
-                    </Badge>
-                  )}
-                </Button>
-              ) : (
-                // placeholder kosong dengan ukuran sama supaya gak geser
-                <Button
-                  variant="success"
-                  className="d-flex align-items-center gap-2"
-                  onClick={handleShowModal}
-                  disabled={isButtonDisabled || loadingGoods}
-                >
-                  <BiCart size={24} />
-                  <span className="fw-bold">
-                    Selesaikan Pesanan
-                  </span>
-                  {badgeCount > 0 && (
-                    <Badge pill bg="danger">
-                      {badgeCount}
-                    </Badge>
-                  )}
-                </Button>
-              )}
+              <Button
+                variant="success"
+                className="d-flex align-items-center gap-2"
+                onClick={handleShowModal}
+                disabled={isButtonDisabled || loadingGoods}
+              >
+                <BiCart size={24} />
+                <span className="fw-bold">
+                  Selesaikan Pesanan
+                </span>
+                {badgeCount > 0 && (
+                  <Badge pill bg="danger">
+                    {badgeCount}
+                  </Badge>
+                )}
+              </Button>
             </div>
 
           </div>
         </footer>
-
-        {isCartVisible && (
-          <CartPopover
-            cart={cartForFooter}
-            onRemove={removeFromCart}
-            grandTotal={grandTotalInCart}
-            onCheckout={() => {
-              setIsCartVisible(false);
-              handleShowModal();
-            }}
-          />
-        )}
 
         {showHistoryTransactionModal && (
           <div
