@@ -1,15 +1,15 @@
 import React, { useCallback, useEffect, useState, useContext } from 'react';
 import './LayoutStyle.css'
-import { IoMdLogOut } from 'react-icons/io';
-import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate, Link } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import Cookies from 'js-cookie';
-import { getGoodsList, getStorageData, logout, saveSellTransaction, countPrice, saveReturTransaction } from '../apis/api';
+import { getGoodsList, getStorageData, logout, countPrice, saveSellTransaction } from '../apis/api';
 import { GoodsContext } from './GoodsContext';
-import { Badge, Button, Card } from 'react-bootstrap';
-import { BiCart } from 'react-icons/bi';
-import { FaUserCircle } from 'react-icons/fa';
+import { Badge, Button } from 'react-bootstrap';
+import { FaUserCircle, FaRunning, FaUser, FaUserFriends, FaExchangeAlt } from 'react-icons/fa';
 import Transaction from '../Transaction';
+import Retur from '../Retur';
+import CustomCartIcon from '../../assets/cartts.png'; 
 
 const modalStyles = {
   overlay: {
@@ -30,6 +30,17 @@ const modalStyles = {
     transform: 'scale(0.95)',
     transition: 'transform 0.3s ease',
     overflow: 'hidden'
+  },
+  returContent: {
+    backgroundColor: 'transparent', 
+    borderRadius: '16px',
+    width: '95%',
+    maxWidth: '1600px', 
+    height: '95vh',
+    display: 'flex',
+    flexDirection: 'column',
+    transform: 'scale(0.95)',
+    transition: 'transform 0.3s ease',
   },
   visibleContent: {
     transform: 'scale(1)',
@@ -81,14 +92,14 @@ const headerStyles = {
   }
 };
 
-// --- KOMPONEN UTAMA LAYOUT ---
 function MainLayout() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const rname = getStorageData().decryptrname;
-  const loc = getStorageData().decryptloc;
   const navigate = useNavigate();
   const location = useLocation();
-  const isReturPage = location.pathname.startsWith('/retur');
+  
+  const [showReturModal, setShowReturModal] = useState(false);
+  const [activeView, setActiveView] = useState('regular'); 
 
   const [goodsList, setGoodsList] = useState([]);
   const [loadingGoods, setLoadingGoods] = useState(false);
@@ -210,45 +221,10 @@ function MainLayout() {
   }, [currentCustomer]);
 
   const handleShowModal = () => {
-    if (isReturPage) {
-      const currentTradeInCart = getTradeInCartFromStorage(tradeInCurrentCustomer);
-      const returSellCart = getReturSellCartFromStorage(tradeInCurrentCustomer);
-
-      if (currentTradeInCart.length > 0 || returSellCart.length > 0) {
-        setShowModal(true);
-
-        const markedTradeInCart = currentTradeInCart.map(item => ({
-          ...item,
-          source: "retur"
-        }));
-
-        const markedReturSellCart = returSellCart.map(item => ({
-          ...item,
-          source: "penjualan"
-        }));
-
-        const mergedCart = [...markedReturSellCart, ...markedTradeInCart].reduce((acc, item) => {
-          const key = `${item.comodity}-${item.source}`;
-          const existing = acc.find(x => `${x.comodity}-${x.source}` === key);
-
-          if (existing) {
-            existing.totalWeight += item.totalWeight;
-            existing.totalPrice += item.totalPrice;
-          } else {
-            acc.push({ ...item });
-          }
-
-          return acc;
-        }, []);
-
-        setResultCounPrice(mergedCart);
-      }
-    } else {
-      const currentRegularCart = getCartFromStorage(currentCustomer);
-      if (currentRegularCart.length > 0) {
-        setShowModal(true);
-        fetchCountPrice(currentCustomer);
-      }
+    const currentRegularCart = getCartFromStorage(currentCustomer);
+    if (currentRegularCart.length > 0) {
+      setShowModal(true);
+      fetchCountPrice(currentCustomer);
     }
   };
 
@@ -346,8 +322,12 @@ function MainLayout() {
   React.useEffect(() => {
     if (location.pathname.startsWith('/settings')) {
       setSettingsOpen(true);
+    } else {
+        if(!location.pathname.startsWith('/dashboard')) {
+            navigate('/dashboard');
+        }
     }
-  }, [location.pathname]);
+  }, [location.pathname, navigate]);
 
   const handleLogoutClick = async () => {
     const result = await Swal.fire({
@@ -390,37 +370,50 @@ function MainLayout() {
     fetchTransaction, loadingSaveTransaction, errorSaveTransaction, getReturSellCartFromStorage
   };
 
-  const activeCustomerForFooter = isReturPage ? tradeInCurrentCustomer : currentCustomer;
-  const cartForFooter = cart;
-  const tradeInCartForFooter = isReturPage ? getTradeInCartFromStorage(activeCustomerForFooter) : [];
-  const badgeCount = cartForFooter.length + tradeInCartForFooter.length;
+  const activeCustomerForFooter = activeView === 'retur' ? tradeInCurrentCustomer : currentCustomer;
+  const cartForFooter = activeView === 'regular' ? cart : [];
+  
+  const badgeCount = cartForFooter.length;
   const isButtonDisabled = badgeCount === 0;
 
-  const handleNextCustomer = () => {
-    if (isReturPage) {
-      if (tradeInCurrentCustomer < 4) {
-        setTradeInCurrentCustomer(prev => prev + 1);
-      }
-    } else {
-      if (currentCustomer < 4) {
-        setCurrentCustomer(prev => prev + 1);
-      }
-    }
+  const handleSetCustomer = (customerIndex) => {
+    navigate('/dashboard');
+    setActiveView('regular');
+    setShowReturModal(false);
+    setCurrentCustomer(customerIndex);
+    setTradeInCurrentCustomer(customerIndex);
   };
 
-  const handlePrevCustomer = () => {
-    if (isReturPage) {
-      if (tradeInCurrentCustomer > 0) {
-        setTradeInCurrentCustomer(prev => prev - 1);
-      }
-    } else {
-      if (currentCustomer > 0) {
-        setCurrentCustomer(prev => prev - 1);
-      }
-    }
+  const handleReturClick = () => {
+      setActiveView('retur');
+      setShowReturModal(true);
   };
 
-  const grandTotalInCart = cartForFooter.reduce((total, item) => total + item.totalPrice, 0);
+  const activeButtonStyle = {
+    backgroundColor: 'white',
+    color: '#6c757d',
+    borderColor: '#dee2e6',
+    padding: '4px 12px',
+    fontSize: '1.5rem',
+    fontWeight: 'bold',
+    lineHeight: 1,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  };
+
+  const inactiveButtonStyle = {
+    backgroundColor: 'black',
+    color: 'white',
+    borderColor: 'white',
+    padding: '4px 12px',
+    fontSize: '1.5rem',
+    fontWeight: 'bold',
+    lineHeight: 1,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  };
 
   return (
     <GoodsContext.Provider
@@ -475,57 +468,88 @@ function MainLayout() {
         <footer
           className="shadow-sm"
           style={{
-            backgroundColor: 'white', borderTop: '1px solid #eaeaea', padding: '0.75rem 1.5rem',
-            position: 'fixed', bottom: 0, left: 0, width: '100%', zIndex: 1000
+            backgroundColor: '#2c3e50',
+            padding: '0.75rem 1.5rem',
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            width: '100%',
+            zIndex: 1000,
           }}
         >
           <div className="d-flex justify-content-between align-items-center">
             <div>
               <Link
-                className="nav-link text-danger fw-semibold d-flex align-items-center gap-1"
+                className="nav-link text-light fw-semibold d-flex align-items-center gap-1"
                 onClick={handleLogoutClick}
-                style={{ cursor: 'pointer' }}
+                style={{ 
+                  cursor: 'pointer',
+                  border: '2px solid white',
+                  borderRadius: '8px',
+                  padding: '4px 12px',
+                  backgroundColor: 'black'
+                }}
                 to="#"
               >
-                <IoMdLogOut size={24} />
+                <FaRunning size={40} style={{ transform: 'scaleX(-1)' }} />
               </Link>
             </div>
 
             <div className="d-flex justify-content-center align-items-center gap-3">
-              <Button variant="secondary" size="sm" onClick={handlePrevCustomer} disabled={activeCustomerForFooter === 0}>
-                &laquo; Prev Customer
+              <Button 
+                onClick={() => handleSetCustomer(0)}
+                style={activeView === 'regular' && activeCustomerForFooter === 0 ? activeButtonStyle : inactiveButtonStyle}
+              >
+                <FaUser size={40} />
               </Button>
-              <div className="d-flex flex-column align-items-center">
-                <div className='d-flex gap-4'>
-                  <NavLink to="/dashboard" className={({ isActive }) => `nav-link ${isActive ? "fw-bold text-primary" : "text-dark"}`}>
-                    Regular
-                  </NavLink>
-                  <NavLink to="/retur" className={({ isActive }) => `nav-link ${isActive ? "fw-bold text-primary" : "text-dark"}`}>
-                    Retur
-                  </NavLink>
-                </div>
-              </div>
-              <Button variant="primary" size="sm" onClick={handleNextCustomer} disabled={activeCustomerForFooter >= 1}>
-                Next Customer &raquo;
+              
+              <Button 
+                onClick={handleReturClick}
+                style={activeView === 'retur' ? activeButtonStyle : inactiveButtonStyle}
+              >
+                <FaExchangeAlt size={40} />
+              </Button>
+
+              <Button 
+                onClick={() => handleSetCustomer(1)}
+                style={activeView === 'regular' && activeCustomerForFooter === 1 ? activeButtonStyle : inactiveButtonStyle}
+              >
+                <FaUserFriends size={40} />
               </Button>
             </div>
 
             <div>
               <Button
-                variant="success"
-                className="d-flex align-items-center gap-2"
                 onClick={handleShowModal}
-                disabled={isButtonDisabled || loadingGoods}
+                disabled={isButtonDisabled || loadingGoods || activeView === 'retur'}
+                style={{
+                    backgroundColor: 'black',
+                    borderColor: 'white',
+                    padding: '4px 12px'
+                }}
               >
-                <BiCart size={24} />
-                <span className="fw-bold">
-                  Selesaikan Pesanan
-                </span>
-                {badgeCount > 0 && (
-                  <Badge pill bg="danger">
-                    {badgeCount}
-                  </Badge>
-                )}
+                <div style={{ position: 'relative' }}>
+                  <img src={CustomCartIcon} alt="Pembayaran" style={{ height: '40px' }} />
+                  
+                  {badgeCount > 0 && (
+                    <Badge
+                      pill
+                      bg="danger"
+                      style={{
+                        position: 'absolute',
+                        top: '30%',
+                        left: '56%',
+                        transform: 'translate(-50%, -50%)',
+                        fontSize: '0.7rem',
+                        lineHeight: '1',
+                        padding: '3px 6px',
+                        minWidth: '18px'
+                      }}
+                    >
+                      {badgeCount}
+                    </Badge>
+                  )}
+                </div>
               </Button>
             </div>
 
@@ -545,6 +569,27 @@ function MainLayout() {
             </div>
           </div>
         )}
+
+        {showReturModal && (
+          <div 
+            style={{...modalStyles.overlay, opacity: 1}}
+            onClick={() => {
+                setShowReturModal(false);
+                setActiveView('regular');
+            }}
+            >
+             <div 
+                style={{...modalStyles.returContent, ...modalStyles.visibleContent}}
+                onClick={(e) => e.stopPropagation()}
+            >
+                <Retur onClose={() => {
+                    setShowReturModal(false);
+                    setActiveView('regular');
+                }} />
+            </div>
+          </div>
+        )}
+
       </div>
     </GoodsContext.Provider>
   );

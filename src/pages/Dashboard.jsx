@@ -172,18 +172,33 @@ const CustomWeightModal = ({ show, onHide, itemId, itemName }) => {
     }
   }, [show, itemId, fetchGoodsPricePerGram]);
 
+  // --- FUNGSI DIPERBARUI ---
   const getPrice = (weight) => {
     if (!goodsPrice || goodsPrice.length === 0) return 0;
-    const found = goodsPrice.find(g => parseInt(g.weight_Gr, 10) === weight);
+
+    // 1. Prioritas utama: cari harga dengan berat yang sama persis
+    const found = goodsPrice.find((g) => parseInt(g.weight_Gr, 10) === weight);
     if (found) return parseInt(found.price_per_Gr, 10);
-    if (weight % 1000 === 0) {
-      const base = goodsPrice.find(g => parseInt(g.weight_Gr, 10) === 1000);
-      return base ? (weight / 1000) * parseInt(base.price_per_Gr, 10) : 0;
+
+    // 2. Jika tidak ada, cari satuan terkecil untuk menghitung harga per gram
+    const validPrices = goodsPrice.filter(g => parseInt(g.weight_Gr, 10) > 0);
+    if (validPrices.length === 0) return 0; // Tidak ada data harga valid
+
+    // Cari unit dengan berat paling kecil
+    const smallestUnit = validPrices.reduce((min, p) => 
+        parseInt(p.weight_Gr, 10) < parseInt(min.weight_Gr, 10) ? p : min
+    );
+
+    if (smallestUnit) {
+        // Hitung harga per gram dari unit terkecil
+        const pricePerGram = parseInt(smallestUnit.price_per_Gr, 10) / parseInt(smallestUnit.weight_Gr, 10);
+        
+        // Kalkulasi harga berdasarkan berat yang diminta dan bulatkan
+        const calculatedPrice = Math.round(pricePerGram * weight);
+        return calculatedPrice;
     }
-    if (weight % 50 === 0) {
-      const base = goodsPrice.find(g => parseInt(g.weight_Gr, 10) === 50);
-      return base ? (weight / 50) * parseInt(base.price_per_Gr, 10) : 0;
-    }
+
+    // Fallback jika semua logika gagal
     return 0;
   };
 
@@ -441,7 +456,6 @@ const TransactionModal = ({ show, onHide }) => {
               const currentDiscount = discounts[idx] || 0;
               const priceAfterDiscount = item.totalPrice - currentDiscount;
 
-              // --- LOGIKA BARU UNTUK DISPLAY KG/GR ---
               const isKg = item.totalWeight >= 1000;
               const displayWeight = isKg ? item.totalWeight / 1000 : item.totalWeight;
               const displayUnit = isKg ? 'kg' : 'gr';
