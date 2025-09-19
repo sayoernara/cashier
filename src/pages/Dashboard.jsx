@@ -649,7 +649,7 @@ function Dashboard() {
               className="swiper-container"
             >
               {pages.map((page, pageIndex) => (
-                <SwiperSlide key={pageIndex} className="goods-page-grid">
+                <SwiperSlide key={pageIndex} className="goods-page-grid h-100">
                   <Row className="g-1 h-100">
                     {page.map((comodity) => {
                       const representativeItem = groupedGoods[comodity]?.[0];
