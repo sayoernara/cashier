@@ -74,22 +74,23 @@ function Login() {
   };
 
   return (
-    <Container fluid className="vh-100 d-flex justify-content-center align-items-center">
+    // Container dibuat menjadi flexbox untuk memusatkan Card baik secara vertikal maupun horizontal
+    <Container fluid className="min-vh-100 d-flex justify-content-center align-items-center p-3">
       <Card
         style={{
           maxWidth: '900px',
           width: '100%',
-          height: '500px',
+          // Hapus height: '500px' agar tinggi bisa menyesuaikan
           overflow: 'hidden',
           borderRadius: '15px',
           boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
         }}
       >
-        <Row className="g-0 h-100">
+        <Row className="g-0">
 
-          {/* Kiri: Carousel */}
-          <Col md={6} className="h-100">
-            <Carousel fade controls={false} indicators={false} interval={3000} className="h-100">
+          {/* Kiri: Carousel - Sembunyikan pada layar kecil (di bawah md) */}
+          <Col md={6} className="d-none d-md-block">
+            <Carousel fade controls={false} indicators={false} interval={3000} style={{ height: '500px' }}>
               <Carousel.Item className="h-100">
                 <img
                   className="d-block w-100 h-100"
@@ -117,8 +118,8 @@ function Login() {
             </Carousel>
           </Col>
 
-          {/* Kanan: Form */}
-          <Col md={6} className="d-flex justify-content-center align-items-center p-4 bg-white h-100">
+          {/* Kanan: Form - Mengambil lebar penuh di layar kecil, setengah di layar medium ke atas */}
+          <Col xs={12} md={6} className="d-flex justify-content-center align-items-center p-4 bg-white">
             <div style={{ maxWidth: '350px', width: '100%' }}>
               <div className="text-center mb-4">
                 <FaCashRegister size={60} color="#007bff" />
@@ -146,7 +147,8 @@ function Login() {
                     onChange={(e) => setPassword(e.target.value)}
                   />
                   <span
-                    className="position-absolute end-0 top-50 translate-middle-y me-3 cursor-pointer"
+                    className="position-absolute end-0 top-50 translate-middle-y me-3"
+                    style={{ cursor: 'pointer' }}
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? <TbEye /> : <TbEyeClosed />}

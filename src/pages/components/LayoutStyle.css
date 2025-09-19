@@ -1,3 +1,4 @@
+/* Existing Scrollbar and Image Styles */
 body {
   overflow-y: scroll;
   scrollbar-width: none;
@@ -7,7 +8,7 @@ body::-webkit-scrollbar {
   display: none;
 }
 
-.goods-list {
+.goods-list, .cartitemlist {
   max-height: 400px;
   overflow-y: auto;
   padding-right: 8px;
@@ -15,45 +16,20 @@ body::-webkit-scrollbar {
   scrollbar-color: #a0aec0 transparent;
 }
 
-.goods-list::-webkit-scrollbar {
+.goods-list::-webkit-scrollbar, .cartitemlist::-webkit-scrollbar {
   width: 6px;
 }
 
-.goods-list::-webkit-scrollbar-track {
+.goods-list::-webkit-scrollbar-track, .cartitemlist::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.goods-list::-webkit-scrollbar-thumb {
+.goods-list::-webkit-scrollbar-thumb, .cartitemlist::-webkit-scrollbar-thumb {
   background: #a0aec0;
   border-radius: 10px;
 }
 
-.goods-list::-webkit-scrollbar-thumb:hover {
-  background: #718096;
-}
-
-.cartitemlist {
-  max-height: 400px;
-  overflow-y: auto;
-  padding-right: 8px;
-  scrollbar-width: thin;
-  scrollbar-color: #a0aec0 transparent;
-}
-
-.cartitemlist::-webkit-scrollbar {
-  width: 6px;
-}
-
-.cartitemlist::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.cartitemlist::-webkit-scrollbar-thumb {
-  background: #a0aec0;
-  border-radius: 10px;
-}
-
-.cartitemlist::-webkit-scrollbar-thumb:hover {
+.goods-list::-webkit-scrollbar-thumb:hover, .cartitemlist::-webkit-scrollbar-thumb:hover {
   background: #718096;
 }
 
@@ -65,4 +41,189 @@ body::-webkit-scrollbar {
   height: 150px;
   object-fit: cover;
   border-radius: 8px;
+}
+
+/* New Responsive Layout Styles */
+
+/* --- Header / Navbar --- */
+.navbar-custom {
+  background-color: #2c3e50;
+  padding: 10px 25px;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.header-cashier-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 10px 18px;
+  color: black;
+  font-weight: 700;
+  font-size: 1.1em;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.alphabet-card {
+  background-color: black;
+  color: white;
+  border: 2px solid #6c757d;
+  border-radius: 8px;
+  width: 60px;
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  font-size: 1.1em;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.alphabet-card.active {
+  background-color: #007bff;
+  border-color: #007bff;
+}
+
+/* --- Main Content --- */
+.main-content {
+  flex-grow: 1;
+  background-color: #000000ff;
+  min-height: calc(100vh - 70px);
+  padding-bottom: 70px; /* Adjust based on footer height */
+}
+
+/* --- Footer --- */
+.footer-custom {
+  background-color: #2c3e50;
+  padding: 0.75rem 1.5rem;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1000;
+  box-shadow: 0 -2px 4px rgba(0,0,0,0.1);
+}
+
+.footer-icon {
+  font-size: 40px;
+}
+
+.footer-logout-button {
+  cursor: pointer;
+  border: 2px solid white;
+  border-radius: 8px;
+  padding: 4px 12px;
+  background-color: black;
+}
+
+.footer-customer-button {
+  background-color: black;
+  color: white;
+  border-color: white;
+  padding: 4px 12px;
+  font-size: 1.5rem;
+  font-weight: bold;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.footer-customer-button.active {
+  background-color: white;
+  color: #6c757d;
+  border-color: #dee2e6;
+}
+
+/* --- Penyesuaian Tombol Keranjang --- */
+.footer-cart-button {
+  background-color: black;
+  border-color: white;
+  padding: 4px 12px;
+  transition: transform 0.2s ease-in-out, background-color 0.2s ease-in-out;
+  /* Properti baru untuk membuat ikon di tengah */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.footer-cart-button:hover:not(:disabled) {
+  background-color: #1a2531; /* Sedikit lebih terang saat disentuh */
+  transform: scale(1.05);
+}
+
+.cart-icon-container {
+  position: relative; /* Diperlukan untuk posisi badge */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+.footer-cart-icon {
+  height: 40px;
+}
+
+.cart-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  transform: translate(-40%, -40%); /* Badge digeser lebih ke kiri */
+  font-size: 0.7rem;
+  line-height: 1;
+  padding: 3px 6px;
+  min-width: 18px;
+  border: 1px solid #2c3e50;
+}
+/* --- End of Penyesuaian --- */
+
+
+/* --- Media Queries for Responsiveness --- */
+@media (max-width: 768px) {
+  /* Adjust navbar for smaller screens */
+  .navbar-custom {
+    padding: 8px 12px;
+  }
+
+  .header-cashier-button {
+    padding: 8px 12px;
+    font-size: 1em;
+  }
+
+  .alphabet-card {
+    width: 45px;
+    height: 35px;
+    font-size: 1em;
+  }
+  
+  /* Add padding to main content on mobile */
+  .main-content {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  /* Adjust footer for smaller screens */
+  .footer-custom {
+    padding: 0.5rem 1rem;
+  }
+
+  .footer-icon {
+    font-size: 28px;
+  }
+
+  .footer-cart-icon {
+    height: 28px;
+  }
+
+  .footer-logout-button, .footer-customer-button, .footer-cart-button {
+    padding: 2px 8px;
+  }
 }

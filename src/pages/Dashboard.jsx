@@ -350,17 +350,21 @@ const TransactionModal = ({ show, onHide }) => {
     }
   }, [show]);
 
+  // =================================================================
+  // ========== BLOK KODE YANG DIPERBAIKI ADA DI BAWAH INI ==========
+  // =================================================================
   useEffect(() => {
-    // Fungsi untuk memeriksa member
     const handleCheckMember = async () => {
       if (!debouncedPhoneNumber) {
         setMemberInfo(null);
         setVoucherDiscount(0);
+        setIdVoucher(null); // Reset ID voucher juga
         return;
       }
       setIsCheckingMember(true);
       setMemberInfo(null);
       setVoucherDiscount(0); // Reset diskon setiap kali nomor baru dicek
+      setIdVoucher(null); // Reset ID voucher setiap kali nomor baru dicek
       try {
         const response = await getVoucherByphone(debouncedPhoneNumber);
         console.log('Response from getVoucherByphone:', response.data.voucher);
@@ -369,6 +373,8 @@ const TransactionModal = ({ show, onHide }) => {
         if (voucherData && voucherData.nominal) {
           setMemberInfo(voucherData);
           setVoucherDiscount(parseInt(voucherData.nominal, 10) || 0);
+          // --- PERBAIKAN UTAMA: Simpan ID Voucher ke state ---
+          setIdVoucher(voucherData.id_voucher);
         } else {
           // Jika respons null atau tidak ada nominal, member dianggap tidak punya voucher aktif
           setMemberInfo({ noVoucher: true });
@@ -381,8 +387,12 @@ const TransactionModal = ({ show, onHide }) => {
       }
     };
 
-handleCheckMember();
-}, [debouncedPhoneNumber]);
+    handleCheckMember();
+  }, [debouncedPhoneNumber]);
+  // ============================================================
+  // ================= AKHIR BLOK PERBAIKAN =====================
+  // ============================================================
+
 
   const DISCOUNT_STEP = 500;
 
