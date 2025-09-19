@@ -12,6 +12,17 @@ import { Pagination } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/pagination';
 
+// A simple hook to get window dimensions for responsive design
+const useWindowSize = () => {
+    const [size, setSize] = useState([window.innerWidth, window.innerHeight]);
+    useEffect(() => {
+        const handleResize = () => setSize([window.innerWidth, window.innerHeight]);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+    return { width: size[0], height: size[1] };
+};
+
 const printReceipt = async (receiptData , number) => {
   try {
     const { items, summary } = receiptData;
@@ -140,6 +151,10 @@ function Retur() {
     
     // State baru untuk trigger konfirmasi otomatis
     const [isConfirming, setIsConfirming] = useState(false);
+
+    // RESPONSIVE CHANGE: Get window width to apply conditional styles
+    const { width } = useWindowSize();
+    const isMobile = width < 992; // Use Bootstrap's 'lg' breakpoint
 
     const resetWeightSelectionState = () => {
         setKgValue(0);
@@ -393,9 +408,9 @@ function Retur() {
     const styles = {
         page: { fontFamily: "'Inter', sans-serif", backgroundColor: "#FFFFFF", minHeight: "100vh", padding: '1rem' },
         transactionCard: { width: '100%', maxWidth: '1200px', margin: 'auto', background: '#ffffff', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)', overflow: 'hidden' },
-        cardContent: { display: 'flex', justifyContent: 'space-between', alignItems: 'stretch', gap: '1.5rem', padding: '1.5rem', minHeight: '90vh' },
-        box: { flex: 8, backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '12px', display: 'flex', flexDirection: 'column', padding: '1.5rem', textAlign: 'center' },
-        controlsContainer: { flex: 9, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', gap: '2rem' },
+        cardContent: { display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: 'stretch', gap: '1.5rem', padding: '1.5rem', minHeight: '90vh' },
+        box: { flex: 1, backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '12px', display: 'flex', flexDirection: 'column', padding: '1.5rem', textAlign: 'center' },
+        controlsContainer: { flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', gap: '2rem', order: isMobile ? -1 : 0 },
         boxContent: { flexGrow: 1, display: 'flex', flexDirection: 'column', width: '100%', minHeight: 0 },
         boxHeader: {
             width: 'fit-content',
@@ -412,7 +427,7 @@ function Retur() {
         },
         priceDisplay: { fontSize: '2.5rem', fontWeight: 700, margin: '1rem 0' },
         actionButton: { textDecoration: 'none', backgroundColor: '#4F46E5', color: 'white', padding: '1rem 2rem', borderRadius: '8px', fontSize: '1.2rem', fontWeight: 600, transition: 'all 0.2s ease', width: '100%', marginTop: 'auto', border: 'none', cursor: 'pointer' },
-        itemsList: { overflowY: 'auto', textAlign: 'left', width: '100%', flexGrow: 1, minHeight: 0, paddingRight: '10px' },
+        itemsList: { overflowY: 'auto', textAlign: 'left', width: '100%', flexGrow: 1, minHeight: isMobile ? '200px' : 0, paddingRight: '10px' },
         listItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 0', borderBottom: '1px solid #E5E7EB' },
         totalRow: { fontWeight: 600, width: '100%', marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid #E5E7EB', flexShrink: 0, fontSize: '1rem' },
         resultLabel: { fontSize: '1rem', fontWeight: 600, color: '#4B5563', textTransform: 'uppercase' },
@@ -424,11 +439,13 @@ function Retur() {
         itemPriceContainer: { display: 'flex', alignItems: 'center', gap: '0.5rem' },
         headerContainer: {
             display: 'flex',
+            flexWrap: 'wrap',
             justifyContent: 'space-between',
             alignItems: 'center',
             marginBottom: '1.5rem',
             paddingBottom: '1rem',
-            borderBottom: '1px solid #dee2e6'
+            borderBottom: '1px solid #dee2e6',
+            gap: '1rem'
         },
         headerTitle: {
             fontSize: '1.75rem',
@@ -471,13 +488,13 @@ function Retur() {
                     >
                         {pages.map((page, pageIndex) => (
                             <SwiperSlide key={pageIndex} className="goods-page-grid">
-                            <Row className="g-1">
+                            <Row className="g-2 g-md-3">
                                 {page.map((comodity) => {
                                 const representativeItem = groupedGoods[comodity]?.[0];
                                 return (
-                                    <Col key={comodity} xs={6} sm={4} lg={3} className="product-card-wrapper">
-                                        <Card className="shadow-sm border-0 product-card-small">
-                                            <Card.Body>
+                                    <Col key={comodity} xs={6} md={4} lg={3} className="product-card-wrapper">
+                                        <Card className="shadow-sm border-0 product-card-small h-100">
+                                            <Card.Body className="d-flex flex-column">
                                                 <div className="item-image-container" onClick={() => handleSelectProduct(representativeItem.id_item, comodity, selectionMode)}>
                                                     {representativeItem.img ? (
                                                     <img
@@ -489,10 +506,10 @@ function Retur() {
                                                     <CiImageOff size={100} className="text-secondary item-img-small-placeholder"/>
                                                     )}
                                                 </div>
-                                                <Card.Title className="product-title-small text-center" onClick={() => handleSelectProduct(representativeItem.id_item, comodity, selectionMode)}>
+                                                <Card.Title className="product-title-small text-center mt-2" onClick={() => handleSelectProduct(representativeItem.id_item, comodity, selectionMode)}>
                                                     {comodity}
                                                 </Card.Title>
-                                                <div className="weight-buttons-container d-flex flex-wrap gap-1 mt-2">
+                                                <div className="weight-buttons-container d-flex flex-wrap gap-1 mt-auto pt-2">
                                                     {groupedGoods[comodity].map((sub, i) => {
                                                     const isHighlighted = sub.weight_txt === "Kg";
                                                     return (
@@ -533,71 +550,75 @@ function Retur() {
         const priceKg = kgValue > 0 ? getPrice(kgValue * 1000) : 0;
         const priceGram = gramValue > 0 ? getPrice(gramValue) : 0;
         const sliderPrice = priceKg + priceGram;
-
+    
         const displayWeight = sliderWeight > 950
             ? `${(sliderWeight / 1000).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 3 })} KG`
             : `${sliderWeight} GR`;
-
+    
         const presetWeights = [ { label: '50 gr', value: 50 }, { label: '100 gr', value: 100 }, { label: '250 gr', value: 250 }, { label: '500 gr', value: 500 }, { label: '750 gr', value: 750 }, { label: '1 kg', value: 1000 }, ];
-
+    
         return (
-            <div className="container-fluid d-flex flex-column" style={styles.page}>
-                <div className='flex-grow-1 d-flex align-items-center justify-content-center'>
-                    <Card className="p-2 p-md-4" style={{width: '100%', maxWidth: '900px'}}>
-                        <Card.Body>
+            <div className="container-fluid d-flex flex-column vh-100 p-0">
+                <div className='flex-grow-1 d-flex flex-column'>
+                    <Card className="p-3" style={{width: '100%', height: '100%', border: 'none', borderRadius: 0, boxShadow: 'none'}}>
+                        <Card.Body className="d-flex flex-column">
                             {loadingGoodsPrice ? (<div className="text-center p-5"><Spinner animation="border" /></div>) : (
                             <>
-                                <div className="d-flex flex-wrap justify-content-center mb-3">
-                                {presetWeights.map((preset) => {
-                                    const presetPrice = getPrice(preset.value);
-                                    return (
-                                    <Button
-                                        key={preset.value} variant="dark"
-                                        className="m-2 d-flex flex-column justify-content-center align-items-center preset-weight-btn"
-                                        onClick={() => handlePresetClick(preset.value, presetPrice)}
-                                        disabled={presetPrice === 0 || loadingGoodsPrice}
-                                    >
-                                        <span className="fw-bold" style={{ fontSize: '1rem' }}>{preset.label}</span>
-                                        {presetPrice > 0 ? <small style={{ fontSize: '0.85rem' }}>Rp {presetPrice.toLocaleString('id-ID')}</small> : <small className="text-muted">N/A</small>}
-                                    </Button>
-                                    );
-                                })}
-                                </div>
-                                <hr />
-
-                                <div className='sliders-container'>
-                                <CustomRangeSlider
-                                    label={`Kelipatan 1 Kg (0 - 20 Kg)`} value={kgValue}
-                                    min={0} max={20} step={1}
-                                    onChange={(e) => setKgValue(parseInt(e.target.value, 10))}
-                                    price={priceKg} unit="kg" iconType="kg"
-                                />
-                                <CustomRangeSlider
-                                    label={`Kelipatan 50 gr (0 - 950 gr)`} value={gramValue}
-                                    min={0} max={950} step={50}
-                                    onChange={(e) => setGramValue(parseInt(e.target.value, 10))}
-                                    price={priceGram} unit="gr" iconType="gr"
-                                />
-                                </div>
-
-                                <div className="modal-bottom-container mt-4">
-                                    <div className="added-items-container">
+                                <div className="flex-grow-1" style={{ overflowY: 'auto' }}>
+                                    <div className="d-flex flex-wrap justify-content-center mb-3">
+                                    {presetWeights.map((preset) => {
+                                        const presetPrice = getPrice(preset.value);
+                                        return (
+                                        <Button
+                                            key={preset.value} variant="dark"
+                                            className="m-2 d-flex flex-column justify-content-center align-items-center preset-weight-btn"
+                                            onClick={() => handlePresetClick(preset.value, presetPrice)}
+                                            disabled={presetPrice === 0 || loadingGoodsPrice}
+                                        >
+                                            <span className="fw-bold" style={{ fontSize: '1rem' }}>{preset.label}</span>
+                                            {presetPrice > 0 ? <small style={{ fontSize: '0.85rem' }}>Rp {presetPrice.toLocaleString('id-ID')}</small> : <small className="text-muted">N/A</small>}
+                                        </Button>
+                                        );
+                                    })}
                                     </div>
-                                    <div className="total-summary-box">
-                                        <div className="total-summary-header">{selectedItemNm}</div>
-                                        <div className="total-summary-row">
-                                        <span className="total-summary-value">{displayWeight}</span>
-                                        </div>
-                                        <div className="total-summary-row price">
-                                        <span className="total-summary-value">{sliderPrice.toLocaleString('id-ID')}</span>
-                                        </div>
+                                    <hr />
+    
+                                    <div className='sliders-container'>
+                                        <CustomRangeSlider
+                                            label={`Kelipatan 1 Kg (0 - 20 Kg)`} value={kgValue}
+                                            min={0} max={20} step={1}
+                                            onChange={(e) => setKgValue(parseInt(e.target.value, 10))}
+                                            price={priceKg} unit="kg" iconType="kg"
+                                        />
+                                        <CustomRangeSlider
+                                            label={`Kelipatan 50 gr (0 - 950 gr)`} value={gramValue}
+                                            min={0} max={950} step={50}
+                                            onChange={(e) => setGramValue(parseInt(e.target.value, 10))}
+                                            price={priceGram} unit="gr" iconType="gr"
+                                        />
                                     </div>
                                 </div>
                                 
-                                <div className="d-grid mt-4">
-                                    <Button variant={selectionMode === 'jual' ? 'primary' : 'success'} size="lg" onClick={handleConfirmWeight} disabled={sliderWeight <= 0 || sliderPrice <= 0}>
-                                        {selectionMode === 'jual' ? 'Tambahkan ke Keranjang' : 'Konfirmasi Tukar Tambah'}
-                                    </Button>
+                                <div className="mt-auto pt-3">
+                                    <div className="modal-bottom-container">
+                                        <div className="added-items-container">
+                                        </div>
+                                        <div className="total-summary-box">
+                                            <div className="total-summary-header">{selectedItemNm}</div>
+                                            <div className="total-summary-row">
+                                            <span className="total-summary-value">{displayWeight}</span>
+                                            </div>
+                                            <div className="total-summary-row price">
+                                            <span className="total-summary-value">{sliderPrice.toLocaleString('id-ID')}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="d-grid mt-3">
+                                        <Button variant={selectionMode === 'jual' ? 'primary' : 'success'} size="lg" onClick={handleConfirmWeight} disabled={sliderWeight <= 0 || sliderPrice <= 0}>
+                                            {selectionMode === 'jual' ? 'Tambahkan ke Keranjang' : 'Konfirmasi Tukar Tambah'}
+                                        </Button>
+                                    </div>
                                 </div>
                             </>
                             )}
@@ -625,7 +646,7 @@ function Retur() {
                                             </div>
                                             <div style={styles.itemPriceContainer}>
                                                 <div style={styles.itemPrice}>{parseInt(item.totalPrice, 10).toLocaleString('id-ID')}</div>
-                                                <Button variant="link" className="text-secondary p-1" onClick={() => handleRemoveTradeIn(index)}>
+                                                <Button variant="link" className="text-danger p-1" onClick={() => handleRemoveTradeIn(index)}>
                                                     <BiX size={24} />
                                                 </Button>
                                             </div>
@@ -661,7 +682,7 @@ function Retur() {
                                             </div>
                                             <div style={styles.itemPriceContainer}>
                                                 <div style={styles.itemPrice}>{parseInt(item.totalPrice, 10).toLocaleString('id-ID')}</div>
-                                                <Button variant="link" className="text-secondary p-1" onClick={() => removeFromReturSellCart(item.comodity)}>
+                                                <Button variant="link" className="text-danger p-1" onClick={() => removeFromReturSellCart(item.comodity)}>
                                                     <BiX size={24} />
                                                 </Button>
                                             </div>
@@ -677,7 +698,6 @@ function Retur() {
                 </div>
             </div>
 
-            {/* Modal ini tetap ada di kode, tapi tidak akan dipanggil lagi dari tombol "Selesaikan Transaksi" */}
             <Modal show={showModal} onHide={handleCloseModal} centered size="lg">
                 <Modal.Header closeButton><Modal.Title>Konfirmasi Transaksi</Modal.Title></Modal.Header>
                 <Modal.Body>
@@ -695,7 +715,7 @@ function Retur() {
                                             <td><strong>{item.comodity}</strong><div className="text-muted small">{item.totalWeight} gr</div><div className="small fst-italic fw-bold" style={{color: isSellItem ? '#0d6efd' : '#198754'}}>{isSellItem ? "Penjualan" : "Pengembalian"}</div></td>
                                             <td className="text-center">
                                                 {isSellItem ? (
-                                                    <InputGroup style={{ minWidth: '150px', margin: 'auto' }}>
+                                                    <InputGroup style={{ maxWidth: '180px', margin: 'auto' }}>
                                                         <Button variant="outline-danger" onClick={() => handleDiscountChange(item.originalIndex, 'decrease')} disabled={manualDiscount === 0}>-</Button>
                                                         <Form.Control className="text-center fw-bold" value={manualDiscount.toLocaleString('id-ID')} readOnly />
                                                         <Button variant="outline-success" onClick={() => handleDiscountChange(item.originalIndex, 'increase', item.totalPrice)} disabled={manualDiscount >= item.totalPrice}>+</Button>
