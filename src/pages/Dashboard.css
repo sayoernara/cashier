@@ -4,8 +4,19 @@ body,
   margin: 0;
   padding: 0;
   height: 100vh;
+  /* Pastikan #root adalah flex container agar flex-grow berfungsi */
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   background-color: #f0f2f5;
+}
+
+/* KUNCI UTAMA ADA DI BAWAH INI */
+.dashboard-container {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;   /* MEMERINTAHKAN CONTAINER UNTUK MENGAMBIL SEMUA SISA RUANG VERTIKAL */
+  min-height: 0;    /* MENCEGAH KONTEN MELUAP PADA LAYAR KECIL */
 }
 
 .modal-dialog {
@@ -270,7 +281,7 @@ input[type=range].custom-slider-input::-moz-range-thumb {
 
 .swiper-container {
   width: 100%;
-  height: 85vh;
+  height: 100%;
   padding-bottom: 40px !important;
   box-sizing: border-box; 
   cursor: grab;
@@ -281,6 +292,7 @@ input[type=range].custom-slider-input::-moz-range-thumb {
 }
 
 .goods-page-grid {
+  height: 100%;
   display: flex;
   align-items: stretch; 
 }
@@ -290,6 +302,7 @@ input[type=range].custom-slider-input::-moz-range-thumb {
 }
 
 .product-card-small {
+  height: 100%;
   display: flex;
   flex-direction: column;
 }
@@ -408,9 +421,9 @@ input[type=range].custom-slider-input::-moz-range-thumb {
   padding: 10px;
   background-color: #ffffff;
   border-radius: 8px;
-  gap: 12px; /* Jarak antar kartu dikembalikan agar tidak terlalu rapat */
+  gap: 12px;
   min-height: 210px;
-  align-items: flex-start; /* Jaga agar kartu tetap rapi di atas jika tingginya berbeda */
+  align-items: flex-start;
 }
 
 /* Scrollbar styling */

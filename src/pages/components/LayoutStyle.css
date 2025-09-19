@@ -68,6 +68,10 @@ body::-webkit-scrollbar {
   font-size: 1.1em;
   cursor: pointer;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s;
+}
+.header-cashier-button:hover {
+  transform: scale(1.05);
 }
 
 .alphabet-card {
@@ -83,7 +87,10 @@ body::-webkit-scrollbar {
   font-weight: bold;
   font-size: 1.1em;
   cursor: pointer;
-  transition: background-color 0.2s, border-color 0.2s;
+  transition: background-color 0.2s, border-color 0.2s, transform 0.2s;
+}
+.alphabet-card:hover {
+  transform: scale(1.1);
 }
 
 .alphabet-card.active {
@@ -111,119 +118,144 @@ body::-webkit-scrollbar {
   box-shadow: 0 -2px 4px rgba(0,0,0,0.1);
 }
 
-.footer-icon {
-  font-size: 40px;
-}
-
-.footer-logout-button {
-  cursor: pointer;
+/* Base class for all footer buttons */
+.footer-button {
+  background-color: black;
+  color: white;
   border: 2px solid white;
   border-radius: 8px;
   padding: 4px 12px;
-  background-color: black;
-}
-
-.footer-customer-button {
-  background-color: black;
-  color: white;
-  border-color: white;
-  padding: 4px 12px;
-  font-size: 1.5rem;
-  font-weight: bold;
-  line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.2s, color 0.2s;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s, transform 0.2s, border-color 0.2s;
 }
 
-.footer-customer-button.active {
+.footer-button:hover:not(:disabled) {
+  transform: scale(1.05);
+}
+
+.footer-button .footer-icon {
+  font-size: 40px;
+}
+
+.footer-button .footer-cart-icon {
+  height: 40px;
+}
+
+/* Specific styles for customer and retur buttons */
+.footer-customer-button, .footer-retur-button {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.footer-customer-button.active, .footer-retur-button.active {
   background-color: white;
   color: #6c757d;
   border-color: #dee2e6;
 }
 
-/* --- Penyesuaian Tombol Keranjang --- */
+/* Cart Button specific adjustments */
 .footer-cart-button {
-  background-color: black;
-  border-color: white;
-  padding: 4px 12px;
-  transition: transform 0.2s ease-in-out, background-color 0.2s ease-in-out;
-  /* Properti baru untuk membuat ikon di tengah */
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background-color: #007bff; /* Latar belakang biru */
+  border-color: #007bff;     /* Border biru agar solid */
 }
 
 .footer-cart-button:hover:not(:disabled) {
-  background-color: #1a2531; /* Sedikit lebih terang saat disentuh */
-  transform: scale(1.05);
+  background-color: #0056b3; /* Biru lebih gelap saat disentuh */
+  border-color: #0056b3;
+  transform: scale(1.05); /* Efek scaling tetap ada */
 }
 
 .cart-icon-container {
-  position: relative; /* Diperlukan untuk posisi badge */
+  position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
   width: 100%;
 }
 
-.footer-cart-icon {
-  height: 40px;
-}
-
 .cart-badge {
   position: absolute;
   top: 0;
   right: 0;
-  transform: translate(-40%, -40%); /* Badge digeser lebih ke kiri */
+  transform: translate(-40%, -40%);
   font-size: 0.7rem;
   line-height: 1;
   padding: 3px 6px;
   min-width: 18px;
   border: 1px solid #2c3e50;
 }
-/* --- End of Penyesuaian --- */
-
 
 /* --- Media Queries for Responsiveness --- */
-@media (max-width: 768px) {
-  /* Adjust navbar for smaller screens */
-  .navbar-custom {
-    padding: 8px 12px;
-  }
 
+/* --- Untuk Layar Besar (1600px ke atas) --- */
+@media (min-width: 1600px) {
   .header-cashier-button {
-    padding: 8px 12px;
-    font-size: 1em;
+    padding: 12px 22px;
+    font-size: 1.2em;
   }
-
   .alphabet-card {
-    width: 45px;
-    height: 35px;
-    font-size: 1em;
+    width: 70px;
+    height: 50px;
+    font-size: 1.3em;
+  }
+  .footer-button {
+    padding: 6px 16px;
+    border-radius: 10px;
+  }
+  .footer-button .footer-icon {
+    font-size: 50px;
+  }
+  .footer-button .footer-cart-icon {
+    height: 50px;
+  }
+}
+
+/* --- Untuk Tablet (Maksimal 768px) --- */
+@media (max-width: 768px) {
+  /* Header */
+  .navbar-custom { padding: 8px 12px; }
+  .header-cashier-button { padding: 8px 12px; font-size: 1em; }
+  .alphabet-card { width: 45px; height: 35px; font-size: 1em; }
+  
+  /* Main Content */
+  .main-content { padding-left: 0.5rem; padding-right: 0.5rem; }
+
+  /* Footer */
+  .footer-custom { padding: 0.5rem 1rem; }
+  
+  /* Responsive footer buttons and icons */
+  .footer-button {
+    padding: 2px 8px; /* Smaller padding */
+  }
+  .footer-button .footer-icon {
+    font-size: 28px; /* Smaller icon font size */
+  }
+  .footer-button .footer-cart-icon {
+    height: 28px; /* Smaller cart icon height */
+  }
+}
+
+/* --- Untuk Mobile (Maksimal 480px) --- */
+@media (max-width: 480px) {
+  /* Further adjustments for very small screens */
+  .footer-button {
+    padding: 2px 5px; /* Even smaller padding */
+    border-radius: 6px;
+  }
+  .footer-button .footer-icon {
+    font-size: 24px; /* Even smaller icons */
+  }
+  .footer-button .footer-cart-icon {
+    height: 24px;
   }
   
-  /* Add padding to main content on mobile */
-  .main-content {
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
-  }
-
-  /* Adjust footer for smaller screens */
-  .footer-custom {
-    padding: 0.5rem 1rem;
-  }
-
-  .footer-icon {
-    font-size: 28px;
-  }
-
-  .footer-cart-icon {
-    height: 28px;
-  }
-
-  .footer-logout-button, .footer-customer-button, .footer-cart-button {
-    padding: 2px 8px;
+  .alphabet-card {
+    width: 38px;
+    height: 30px;
+    font-size: 0.9em;
   }
 }

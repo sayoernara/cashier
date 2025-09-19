@@ -136,30 +136,85 @@ function MainLayout() {
     setCart(getCartFromStorage(currentCustomer));
   }, [currentCustomer]);
 
-
   const addToCart = (comodity, id_item, weight, price) => {
     setCart((prevCart) => {
       const numWeight = parseInt(weight, 10);
       const numPrice = parseInt(price, 10);
 
-      const newItem = {
-        id: Date.now(),
-        comodity,
-        id_item,
-        totalWeight: numWeight,
-        totalPrice: numPrice,
-      };
+      const existingItemIndex = prevCart.findIndex(
+        (item) => item.comodity === comodity
+      );
 
-      const updatedCart = [...prevCart, newItem];
+      let updatedCart;
+
+      if (existingItemIndex > -1) {
+        updatedCart = prevCart.map((item, index) => {
+          if (index === existingItemIndex) {
+            return {
+              ...item,
+              totalWeight: item.totalWeight + numWeight,
+              totalPrice: item.totalPrice + numPrice,
+            };
+          }
+          return item;
+        });
+      } else {
+        const newItem = {
+          id: Date.now(),
+          comodity,
+          id_item,
+          totalWeight: numWeight,
+          totalPrice: numPrice,
+        };
+        updatedCart = [...prevCart, newItem];
+      }
+
       saveCartToStorage(currentCustomer, updatedCart);
       return updatedCart;
     });
   };
 
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setResultCounPrice([]);
+    setDiscounts([]);
+    setPaymentAmount("");
+  };
+
+  const fetchCountPrice = useCallback(async (customerIndex) => {
+    const activeCustomerIndex = customerIndex !== undefined ? customerIndex : currentCustomer;
+    try {
+      setLoadingCountPrice(true);
+      const activeCart = getCartFromStorage(activeCustomerIndex);
+      if (activeCart.length === 0) {
+        setResultCounPrice([]);
+        // Jika keranjang kosong dan modal masih terbuka, tutup modalnya
+        if (showModal) {
+            handleCloseModal();
+        }
+        return;
+      }
+      const result = await countPrice(activeCart);
+      setResultCounPrice(result.data.cart);
+    } catch (err) {
+      setErrorCountPrice(err.message);
+    } finally {
+      setLoadingCountPrice(false);
+    }
+  }, [currentCustomer, showModal]); // Tambahkan showModal sebagai dependency
+
   const removeFromCart = (comodityToRemove) => {
-    const updatedCart = cart.filter((item) => item.comodity !== comodityToRemove);
+    const updatedCart = cart.filter(
+      (item) => item.comodity !== comodityToRemove
+    );
     setCart(updatedCart);
     saveCartToStorage(currentCustomer, updatedCart);
+    
+    // Setelah menghapus, selalu panggil fetchCountPrice untuk update UI
+    // fetchCountPrice sudah punya logika untuk menutup modal jika keranjang jadi kosong
+    if (showModal) {
+        fetchCountPrice(currentCustomer);
+    }
   };
 
   const getTradeInCartFromStorage = (customerIndex) => {
@@ -202,24 +257,6 @@ function MainLayout() {
     });
   };
 
-  const fetchCountPrice = useCallback(async (customerIndex) => {
-    const activeCustomerIndex = customerIndex !== undefined ? customerIndex : currentCustomer;
-    try {
-      setLoadingCountPrice(true);
-      const activeCart = getCartFromStorage(activeCustomerIndex);
-      if (activeCart.length === 0) {
-        setResultCounPrice([]);
-        return;
-      }
-      const result = await countPrice(activeCart);
-      setResultCounPrice(result.data.cart);
-    } catch (err) {
-      setErrorCountPrice(err.message);
-    } finally {
-      setLoadingCountPrice(false);
-    }
-  }, [currentCustomer]);
-
   const handleShowModal = () => {
     const currentRegularCart = getCartFromStorage(currentCustomer);
     if (currentRegularCart.length > 0) {
@@ -236,13 +273,6 @@ function MainLayout() {
       console.error("Gagal mengambil keranjang retur:", error);
       return [];
     }
-  };
-
-  const handleCloseModal = () => {
-    setShowModal(false);
-    setResultCounPrice([]);
-    setDiscounts([]);
-    setPaymentAmount("");
   };
 
   const fetchTransaction = async (summaryData) => {
@@ -364,7 +394,7 @@ function MainLayout() {
     tradeInCurrentCustomer, setTradeInCurrentCustomer,
     tradeInCart, setTradeInCart, addToTradeInCart, removeFromTradeInCart,
     showModal, setShowModal, handleShowModal, handleCloseModal,
-    resultCountPrice, loadingCountPrice, errorCountPrice,
+    resultCountPrice, loadingCountPrice, errorCountPrice, fetchCountPrice, 
     discounts, setDiscounts,
     paymentAmount, setPaymentAmount,
     fetchTransaction, loadingSaveTransaction, errorSaveTransaction, getReturSellCartFromStorage
@@ -478,81 +508,74 @@ function MainLayout() {
           }}
         >
           <div className="d-flex justify-content-between align-items-center">
-            <div>
-              <Link
-                className="nav-link text-light fw-semibold d-flex align-items-center gap-1"
-                onClick={handleLogoutClick}
-                style={{ 
-                  cursor: 'pointer',
-                  border: '2px solid white',
-                  borderRadius: '8px',
-                  padding: '4px 12px',
-                  backgroundColor: 'black'
-                }}
-                to="#"
-              >
-                <FaRunning size={40} style={{ transform: 'scaleX(-1)' }} />
-              </Link>
-            </div>
+            <Link
+              className="nav-link text-light fw-semibold d-flex align-items-center gap-1"
+              onClick={handleLogoutClick}
+              style={{ 
+                cursor: 'pointer',
+                border: '2px solid white',
+                borderRadius: '8px',
+                padding: '4px 12px',
+                backgroundColor: 'black'
+              }}
+              to="#"
+            >
+              <FaRunning size={40} style={{ transform: 'scaleX(-1)' }} />
+            </Link>
 
-            <div className="d-flex justify-content-center align-items-center gap-3">
-              <Button 
-                onClick={() => handleSetCustomer(0)}
-                style={activeView === 'regular' && activeCustomerForFooter === 0 ? activeButtonStyle : inactiveButtonStyle}
-              >
-                <FaUser size={40} />
-              </Button>
-              
-              <Button 
-                onClick={handleReturClick}
-                style={activeView === 'retur' ? activeButtonStyle : inactiveButtonStyle}
-              >
-                <FaExchangeAlt size={40} />
-              </Button>
+            <Button 
+              onClick={() => handleSetCustomer(0)}
+              style={activeView === 'regular' && activeCustomerForFooter === 0 ? activeButtonStyle : inactiveButtonStyle}
+            >
+              <FaUser size={40} />
+            </Button>
+            
+            <Button 
+              onClick={handleReturClick}
+              style={activeView === 'retur' ? activeButtonStyle : inactiveButtonStyle}
+            >
+              <FaExchangeAlt size={40} />
+            </Button>
 
-              <Button 
-                onClick={() => handleSetCustomer(1)}
-                style={activeView === 'regular' && activeCustomerForFooter === 1 ? activeButtonStyle : inactiveButtonStyle}
-              >
-                <FaUserFriends size={40} />
-              </Button>
-            </div>
+            <Button 
+              onClick={() => handleSetCustomer(1)}
+              style={activeView === 'regular' && activeCustomerForFooter === 1 ? activeButtonStyle : inactiveButtonStyle}
+            >
+              <FaUserFriends size={40} />
+            </Button>
 
-            <div>
-              <Button
-                onClick={handleShowModal}
-                disabled={isButtonDisabled || loadingGoods || activeView === 'retur'}
-                style={{
-                    backgroundColor: 'black',
-                    borderColor: 'white',
-                    padding: '4px 12px'
-                }}
-              >
-                <div style={{ position: 'relative' }}>
-                  <img src={CustomCartIcon} alt="Pembayaran" style={{ height: '40px' }} />
-                  
-                  {badgeCount > 0 && (
-                    <Badge
-                      pill
-                      bg="danger"
-                      style={{
-                        position: 'absolute',
-                        top: '30%',
-                        left: '56%',
-                        transform: 'translate(-50%, -50%)',
-                        fontSize: '0.7rem',
-                        lineHeight: '1',
-                        padding: '3px 6px',
-                        minWidth: '18px'
-                      }}
-                    >
-                      {badgeCount}
-                    </Badge>
-                  )}
-                </div>
-              </Button>
-            </div>
-
+            <Button
+              onClick={handleShowModal}
+              disabled={isButtonDisabled || loadingGoods || activeView === 'retur'}
+              style={{
+                  backgroundColor: 'black',
+                  borderColor: 'white',
+                  padding: '4px 12px'
+              }}
+            >
+              <div style={{ position: 'relative' }}>
+                <img src={CustomCartIcon} alt="Pembayaran" style={{ height: '40px' }} />
+                
+                {badgeCount > 0 && (
+                  <Badge
+                    pill
+                    bg="danger"
+                    style={{
+                      position: 'absolute',
+                      top: '30%',
+                      left: '56%',
+                      transform: 'translate(-50%, -50%)',
+                      fontSize: '0.7rem',
+                      lineHeight: '1',
+                      padding: '3px 6px',
+                      minWidth: '18px'
+                    }}
+                  >
+                    {badgeCount}
+                  </Badge>
+                )}
+              </div>
+            </Button>
           </div>
         </footer>
 

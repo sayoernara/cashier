@@ -140,7 +140,7 @@ const CustomRangeSlider = ({ label, value, min, max, step, onChange, price, unit
 };
 
 const CustomWeightModal = ({ show, onHide, itemId, itemName }) => {
-  const { cart, addToCart, removeFromCart } = useContext(GoodsContext);
+  const { cart, addToCart, removeFromCart } = useContext(GoodsContext); 
   const [errorGoodsPrice, setErrorGoodsPrice] = useState(null);
   const [loadingGoodsPrice, setLoadingGoodsPrice] = useState(false);
   const [goodsPrice, setGoodsPrice] = useState([]);
@@ -172,33 +172,25 @@ const CustomWeightModal = ({ show, onHide, itemId, itemName }) => {
     }
   }, [show, itemId, fetchGoodsPricePerGram]);
 
-  // --- FUNGSI DIPERBARUI ---
   const getPrice = (weight) => {
     if (!goodsPrice || goodsPrice.length === 0) return 0;
 
-    // 1. Prioritas utama: cari harga dengan berat yang sama persis
     const found = goodsPrice.find((g) => parseInt(g.weight_Gr, 10) === weight);
     if (found) return parseInt(found.price_per_Gr, 10);
 
-    // 2. Jika tidak ada, cari satuan terkecil untuk menghitung harga per gram
     const validPrices = goodsPrice.filter(g => parseInt(g.weight_Gr, 10) > 0);
-    if (validPrices.length === 0) return 0; // Tidak ada data harga valid
+    if (validPrices.length === 0) return 0; 
 
-    // Cari unit dengan berat paling kecil
     const smallestUnit = validPrices.reduce((min, p) => 
         parseInt(p.weight_Gr, 10) < parseInt(min.weight_Gr, 10) ? p : min
     );
 
     if (smallestUnit) {
-        // Hitung harga per gram dari unit terkecil
         const pricePerGram = parseInt(smallestUnit.price_per_Gr, 10) / parseInt(smallestUnit.weight_Gr, 10);
-        
-        // Kalkulasi harga berdasarkan berat yang diminta dan bulatkan
         const calculatedPrice = Math.round(pricePerGram * weight);
         return calculatedPrice;
     }
 
-    // Fallback jika semua logika gagal
     return 0;
   };
 
@@ -207,7 +199,7 @@ const CustomWeightModal = ({ show, onHide, itemId, itemName }) => {
     { label: '250 gr', value: 250 }, { label: '500 gr', value: 500 },
     { label: '750 gr', value: 750 }, { label: '1 kg', value: 1000 },
   ];
-
+  
   const itemsInCart = useMemo(() => cart.filter(item => item.comodity === itemName), [cart, itemName]);
   const totalInCartWeight = useMemo(() => itemsInCart.reduce((sum, item) => sum + item.totalWeight, 0), [itemsInCart]);
   const totalInCartPrice = useMemo(() => itemsInCart.reduce((sum, item) => sum + item.totalPrice, 0), [itemsInCart]);
@@ -291,7 +283,7 @@ const CustomWeightModal = ({ show, onHide, itemId, itemName }) => {
             {itemsInCart.map((item, index) => (
               <div key={index} className="added-item-card">
                 {item.totalWeight > 950 ? `${item.totalWeight / 1000} KG` : `${item.totalWeight} GR`}
-                <div className="delete-item-icon" onClick={() => removeFromCart(item.comodity, item.id)}>&times;</div>
+                <div className="delete-item-icon" onClick={() => removeFromCart(item.comodity)}>&times;</div>
               </div>
             ))}
           </div>
@@ -313,6 +305,7 @@ const CustomWeightModal = ({ show, onHide, itemId, itemName }) => {
 // --- KOMPONEN MODAL TRANSAKSI ---
 const TransactionModal = ({ show, onHide }) => {
   const {
+    removeFromCart, 
     resultCountPrice, loadingCountPrice, errorCountPrice,
     discounts, setDiscounts, paymentAmount, setPaymentAmount,
     fetchTransaction, loadingSaveTransaction
@@ -323,7 +316,7 @@ const TransactionModal = ({ show, onHide }) => {
   const [isCheckingMember, setIsCheckingMember] = useState(false);
   const [voucherDiscount, setVoucherDiscount] = useState(0);
   const [idVoucher, setIdVoucher] = useState(null);
-  const [activeInput, setActiveInput] = useState('payment'); // 'payment' or 'phone'
+  const [activeInput, setActiveInput] = useState('payment');
   const [memberInfo, setMemberInfo] = useState(null);
 
   useEffect(() => {
@@ -331,7 +324,6 @@ const TransactionModal = ({ show, onHide }) => {
       setDebouncedPhoneNumber(phoneNumber);
     }, 1000);
 
-    // Membersihkan timeout jika user mengetik lagi sebelum jeda selesai
     return () => {
       clearTimeout(handler);
     };
@@ -350,38 +342,32 @@ const TransactionModal = ({ show, onHide }) => {
     }
   }, [show]);
 
-  // =================================================================
-  // ========== BLOK KODE YANG DIPERBAIKI ADA DI BAWAH INI ==========
-  // =================================================================
   useEffect(() => {
     const handleCheckMember = async () => {
       if (!debouncedPhoneNumber) {
         setMemberInfo(null);
         setVoucherDiscount(0);
-        setIdVoucher(null); // Reset ID voucher juga
+        setIdVoucher(null); 
         return;
       }
       setIsCheckingMember(true);
       setMemberInfo(null);
-      setVoucherDiscount(0); // Reset diskon setiap kali nomor baru dicek
-      setIdVoucher(null); // Reset ID voucher setiap kali nomor baru dicek
+      setVoucherDiscount(0); 
+      setIdVoucher(null); 
       try {
         const response = await getVoucherByphone(debouncedPhoneNumber);
         console.log('Response from getVoucherByphone:', response.data.voucher);
         const voucherData = response.data.voucher;
-        // Cek jika ada voucher dan nominalnya
         if (voucherData && voucherData.nominal) {
           setMemberInfo(voucherData);
           setVoucherDiscount(parseInt(voucherData.nominal, 10) || 0);
-          // --- PERBAIKAN UTAMA: Simpan ID Voucher ke state ---
           setIdVoucher(voucherData.id_voucher);
         } else {
-          // Jika respons null atau tidak ada nominal, member dianggap tidak punya voucher aktif
           setMemberInfo({ noVoucher: true });
         }
       } catch (error) {
         console.error("Gagal cek member:", error);
-        setMemberInfo({ error: true }); // Tandai sebagai error
+        setMemberInfo({ error: true });
       } finally {
         setIsCheckingMember(false);
       }
@@ -389,9 +375,6 @@ const TransactionModal = ({ show, onHide }) => {
 
     handleCheckMember();
   }, [debouncedPhoneNumber]);
-  // ============================================================
-  // ================= AKHIR BLOK PERBAIKAN =====================
-  // ============================================================
 
 
   const DISCOUNT_STEP = 500;
@@ -516,11 +499,17 @@ const TransactionModal = ({ show, onHide }) => {
               const isKg = item.totalWeight >= 1000;
               const displayWeight = isKg ? item.totalWeight / 1000 : item.totalWeight;
               const displayUnit = isKg ? 'kg' : 'gr';
-              const pricePerUnit = isKg ? item.totalPrice / (item.totalWeight / 1000) : item.totalPrice / item.totalWeight;
+              const pricePerUnit = item.totalWeight > 0 ? item.totalPrice / item.totalWeight * (isKg ? 1000 : 1) : 0;
+
 
               return (
                 <div key={idx} className="cart-item-card fading-in">
-                  <div className="btn-remove-from-modal">&times;</div>
+                  <div 
+                    className="btn-remove-from-modal" 
+                    onClick={() => removeFromCart(item.comodity)}
+                  >
+                    &times;
+                  </div>
                   <div className="item-name">{item.comodity}</div>
                   <div className="item-details">
                     {`${displayWeight.toLocaleString('id-ID')} ${displayUnit} × ${pricePerUnit.toLocaleString('id-ID')}`}
@@ -642,13 +631,13 @@ function Dashboard() {
 
 
   return (
-    <div className="container-fluid">
-      <Row>
-        <Col md={12}>
+    <div className="container-fluid dashboard-container">
+      <Row className="h-100">
+        <Col md={12} className="h-100 d-flex flex-column">
           {errorLoadingGoods ? (
             <Alert variant="danger">{errorLoadingGoods}</Alert>
           ) : loadingGoods ? (
-            <div className="d-flex justify-content-center align-items-center" style={{ height: "85vh" }}>
+            <div className="d-flex justify-content-center align-items-center h-100">
               <Spinner animation="border" variant="primary" role="status" style={{ width: "4rem", height: "4rem" }} />
             </div>
           ) : (
@@ -661,11 +650,11 @@ function Dashboard() {
             >
               {pages.map((page, pageIndex) => (
                 <SwiperSlide key={pageIndex} className="goods-page-grid">
-                  <Row className="g-1">
+                  <Row className="g-1 h-100">
                     {page.map((comodity) => {
                       const representativeItem = groupedGoods[comodity]?.[0];
                       return (
-                        <Col key={comodity} xs={6} sm={4} lg={3} className="product-card-wrapper">
+                        <Col key={comodity} xs={6} sm={3} className="product-card-wrapper">
                           <Card className="shadow-sm border-0 product-card-small">
                             <Card.Body>
                               <div className="item-image-container">
