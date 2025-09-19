@@ -392,8 +392,8 @@ function Retur() {
 
     const styles = {
         page: { fontFamily: "'Inter', sans-serif", backgroundColor: "#FFFFFF", minHeight: "100vh", padding: '1rem' },
-        transactionCard: { width: '100%', maxWidth: '1500px', margin: 'auto', background: '#ffffff', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)', overflow: 'hidden' },
-        cardContent: { display: 'flex', justifyContent: 'space-between', alignItems: 'stretch', gap: '2rem', padding: '2rem', minHeight: '80vh' },
+        transactionCard: { width: '100%', maxWidth: '1200px', margin: 'auto', background: '#ffffff', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)', overflow: 'hidden' },
+        cardContent: { display: 'flex', justifyContent: 'space-between', alignItems: 'stretch', gap: '1.5rem', padding: '1.5rem', minHeight: '100vh' },
         box: { flex: 8, backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '12px', display: 'flex', flexDirection: 'column', padding: '1.5rem', textAlign: 'center' },
         controlsContainer: { flex: 5, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', gap: '2rem' },
         boxContent: { flexGrow: 1, display: 'flex', flexDirection: 'column', width: '100%', minHeight: 0 },

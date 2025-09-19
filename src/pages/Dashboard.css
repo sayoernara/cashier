@@ -281,7 +281,7 @@ input[type=range].custom-slider-input::-moz-range-thumb {
 
 .swiper-container {
   width: 100%;
-  height: 100%;
+  height: 80vh;
   padding-bottom: 40px !important;
   box-sizing: border-box; 
   cursor: grab;
