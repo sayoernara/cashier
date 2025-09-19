@@ -319,10 +319,23 @@ const TransactionModal = ({ show, onHide }) => {
   } = useContext(GoodsContext);
 
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [debouncedPhoneNumber, setDebouncedPhoneNumber] = useState('');
   const [isCheckingMember, setIsCheckingMember] = useState(false);
   const [voucherDiscount, setVoucherDiscount] = useState(0);
   const [idVoucher, setIdVoucher] = useState(null);
   const [activeInput, setActiveInput] = useState('payment'); // 'payment' or 'phone'
+  const [memberInfo, setMemberInfo] = useState(null);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedPhoneNumber(phoneNumber);
+    }, 1000);
+
+    // Membersihkan timeout jika user mengetik lagi sebelum jeda selesai
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [phoneNumber]);
 
   useEffect(() => {
     if (show) {
@@ -336,6 +349,40 @@ const TransactionModal = ({ show, onHide }) => {
       setIdVoucher(null);
     }
   }, [show]);
+
+  useEffect(() => {
+    // Fungsi untuk memeriksa member
+    const handleCheckMember = async () => {
+      if (!debouncedPhoneNumber) {
+        setMemberInfo(null);
+        setVoucherDiscount(0);
+        return;
+      }
+      setIsCheckingMember(true);
+      setMemberInfo(null);
+      setVoucherDiscount(0); // Reset diskon setiap kali nomor baru dicek
+      try {
+        const response = await getVoucherByphone(debouncedPhoneNumber);
+        console.log('Response from getVoucherByphone:', response.data.voucher);
+        const voucherData = response.data.voucher;
+        // Cek jika ada voucher dan nominalnya
+        if (voucherData && voucherData.nominal) {
+          setMemberInfo(voucherData);
+          setVoucherDiscount(parseInt(voucherData.nominal, 10) || 0);
+        } else {
+          // Jika respons null atau tidak ada nominal, member dianggap tidak punya voucher aktif
+          setMemberInfo({ noVoucher: true });
+        }
+      } catch (error) {
+        console.error("Gagal cek member:", error);
+        setMemberInfo({ error: true }); // Tandai sebagai error
+      } finally {
+        setIsCheckingMember(false);
+      }
+    };
+
+handleCheckMember();
+}, [debouncedPhoneNumber]);
 
   const DISCOUNT_STEP = 500;
 
@@ -514,14 +561,14 @@ const TransactionModal = ({ show, onHide }) => {
               </div>
             </div>
 
-            <div className="summary-item input-item" onClick={() => setActiveInput('payment')}>
+            <div className="summary-item input-item" onClick={() => setActiveInput('payment')} style={{ borderColor: activeInput === 'payment' ? '#0d6efd' : '#dee2e6' }}>
               <label className="summary-label">Uang Dibayar</label>
               <div className="summary-input">
                 {parseInt(paymentAmount || 0, 10).toLocaleString('id-ID')}
               </div>
             </div>
             
-            <div className="summary-item input-item" onClick={() => setActiveInput('phone')}>
+            <div className="summary-item input-item" onClick={() => setActiveInput('phone')} style={{ borderColor: activeInput === 'phone' ? '#0d6efd' : '#dee2e6' }}>
               <label className="summary-label">No Telepon</label>
               <div className="summary-input phone">
                 {phoneNumber || '-'}
