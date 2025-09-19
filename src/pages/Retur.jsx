@@ -613,12 +613,6 @@ function Retur() {
                                             </div>
                                         </div>
                                     </div>
-                                    
-                                    <div className="d-grid mt-3">
-                                        <Button variant={selectionMode === 'jual' ? 'primary' : 'success'} size="lg" onClick={handleConfirmWeight} disabled={sliderWeight <= 0 || sliderPrice <= 0}>
-                                            {selectionMode === 'jual' ? 'Tambahkan ke Keranjang' : 'Konfirmasi Tukar Tambah'}
-                                        </Button>
-                                    </div>
                                 </div>
                             </>
                             )}

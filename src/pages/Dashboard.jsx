@@ -599,7 +599,7 @@ const TransactionModal = ({ show, onHide }) => {
 // --- KOMPONEN UTAMA DASHBOARD ---
 function Dashboard() {
   const {
-    groupedGoods, loadingGoods, errorLoadingGoods,
+    groupedGoods, loadingGoods, errorLoadingGoods, selectedLetter,
     addToCart,
     showModal, handleCloseModal
   } = useContext(GoodsContext);
@@ -618,7 +618,13 @@ function Dashboard() {
     setShowModalCstmW(false);
   };
 
-  const filteredComodities = Object.keys(groupedGoods);
+  const filteredComodities = useMemo(() => {
+    const comodityKeys = Object.keys(groupedGoods);
+    if (selectedLetter) {
+      return comodityKeys.filter(comodity => comodity.toUpperCase().startsWith(selectedLetter));
+    }
+    return comodityKeys;
+  }, [groupedGoods, selectedLetter]);
 
   const itemsPerPage = 8;
   const pages = useMemo(() => {

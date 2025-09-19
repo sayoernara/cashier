@@ -48,7 +48,7 @@ body::-webkit-scrollbar {
 /* --- Header / Navbar --- */
 .navbar-custom {
   background-color: #2c3e50;
-  padding: 10px 25px;
+  padding: 20px 40px;
   position: sticky;
   top: 0;
   z-index: 1000;
@@ -62,10 +62,10 @@ body::-webkit-scrollbar {
   background-color: white;
   border: none;
   border-radius: 12px;
-  padding: 10px 18px;
+  padding: 14px 24px;
   color: black;
   font-weight: 700;
-  font-size: 1.1em;
+  font-size: 1.3em;
   cursor: pointer;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s;
@@ -79,13 +79,13 @@ body::-webkit-scrollbar {
   color: white;
   border: 2px solid #6c757d;
   border-radius: 8px;
-  width: 60px;
-  height: 40px;
+  width: 95px;
+  height: 70px;
   display: flex;
   justify-content: center;
   align-items: center;
   font-weight: bold;
-  font-size: 1.1em;
+  font-size: 3em;
   cursor: pointer;
   transition: background-color 0.2s, border-color 0.2s, transform 0.2s;
 }
