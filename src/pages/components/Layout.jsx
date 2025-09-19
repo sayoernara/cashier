@@ -34,8 +34,8 @@ const modalStyles = {
   returContent: {
     backgroundColor: 'transparent', 
     borderRadius: '16px',
-    width: '100%',
-    maxWidth: '1000px', 
+    width: '90%',
+    maxWidth: '1300px', 
     height: '95vh',
     display: 'flex',
     flexDirection: 'column',
