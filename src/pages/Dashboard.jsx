@@ -26,7 +26,7 @@ const modalStyles = {
     width: '95%',
     maxWidth: '1200px',
     height: '100vh',
-    maxHeight: '98vh',
+    maxHeight: '95vh',
     display: 'flex',
     flexDirection: 'column',
     boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)',
@@ -46,7 +46,7 @@ const modalStyles = {
     transition: 'transform 0.3s ease',
     overflowY: 'auto',
     maxHeight: '100vh',
-    height: '98vh',
+    height: '95vh',
   },
   visibleContent: {
     transform: 'scale(1)',

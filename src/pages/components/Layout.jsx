@@ -36,7 +36,7 @@ const modalStyles = {
     borderRadius: '16px',
     width: '90%',
     maxWidth: '1200px', 
-    height: '98vh',
+    height: '95vh',
     display: 'flex',
     flexDirection: 'column',
     transform: 'scale(0.95)',
