@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useContext, useMemo, useEffect, useRef } from 'react';
-import sfx from '../assets-sfx.mp3'; // Import the sound file with the corrected path
+import sfx from '../assets/sfx.mp3'; // Import the sound file with the corrected path
 
 // Pastikan getStorageData diimpor untuk mendapatkan info kasir dan lokasi
 import { getGoodsPricePerGram, getVoucherByphone, getStorageData } from './apis/api';
