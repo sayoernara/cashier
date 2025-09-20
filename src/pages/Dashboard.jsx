@@ -1,7 +1,7 @@
 import React, { useCallback, useState, useContext, useMemo, useEffect, useRef } from 'react';
 import sfx from '../assets/sfx.mp3'; // Import the sound file with the corrected path
 
-// Pastikan getStorageData diimpor untuk mendapatkan info kasir dan lokasi
+// Mengembalikan getStorageData untuk mendapatkan info kasir dan lokasi untuk struk
 import { getGoodsPricePerGram, getVoucherByphone, getStorageData } from './apis/api';
 import { Alert, Col, Row, Spinner, Card, Button } from 'react-bootstrap';
 import { CiImageOff } from 'react-icons/ci';
@@ -57,7 +57,7 @@ const modalStyles = {
 // --- FUNGSI HELPER UNTUK CETAK (VERSI BARU SESUAI kirim_ke_rawbt.php) ---
 const printReceipt = async (receiptData, storageData) => {
   try {
-    const { items, summary, transactionNumber } = receiptData;
+    const { items, summary } = receiptData;
     const lebarKertas = 32;
     const ESC = String.fromCharCode(27);
     const GS = String.fromCharCode(29);
@@ -87,12 +87,10 @@ const printReceipt = async (receiptData, storageData) => {
     };
 
     // === HEADER ===
-    // Gunakan perintah alignment bawaan printer untuk hasil yang presisi
     nota_text.push(ESC + "a" + String.fromCharCode(1)); // 1 = Center Alignment
     nota_text.push(GS + "!" + String.fromCharCode(17)); // Double Height & Width (0x11)
     nota_text.push("SAYOERNARA");
 
-    // Reset font ke normal dan kurangi spasi baris untuk menghilangkan gap
     nota_text.push(GS + "!" + String.fromCharCode(0));  // Normal Size
     nota_text.push(ESC + "!" + String.fromCharCode(0)); // Reset font mode
     nota_text.push(ESC + "3" + String.fromCharCode(24)); // Set line spacing lebih rapat (24 dots)
@@ -100,13 +98,11 @@ const printReceipt = async (receiptData, storageData) => {
     nota_text.push("SAYUR GROSIR DAN ECERAN");
     nota_text.push("08/22334455/10");
     
-    // Reset spasi baris ke default sebelum lanjut
-    nota_text.push(ESC + "2");
+    nota_text.push(ESC + "2"); // Reset spasi baris ke default
     
     const namaTitik = (storageData.decryptloc || '???').toUpperCase();
     nota_text.push(namaTitik);
     
-    // Kembalikan alignment ke kiri untuk sisa struk
     nota_text.push(ESC + "a" + String.fromCharCode(0)); // 0 = Left Alignment
     nota_text.push('-'.repeat(lebarKertas));
 
@@ -120,12 +116,13 @@ const printReceipt = async (receiptData, storageData) => {
     nota_text.push('-'.repeat(lebarKertas));
     
     // === DAFTAR ITEM ===
-    // Harga asli (subtotal) dihitung dari harga item sebelum diskon manual
+    // Harga asli (subtotal) dihitung dari harga item SEBELUM diskon manual
     const subtotalBeli = items.reduce((sum, item) => sum + item.totalPrice, 0);
     
     items.forEach(item => {
         const beratKg = item.totalWeight / 1000;
-        const beratStr = `(${beratKg.toLocaleString('id-ID', {minimumFractionDigits: 1, maximumFractionDigits: 2})}kg)`;
+        // Menampilkan berat dalam format (1.2kg) atau (250gr)
+        const beratStr = item.totalWeight >= 1000 ? `(${beratKg.toLocaleString('id-ID', {minimumFractionDigits: 1, maximumFractionDigits: 2})}kg)` : `(${item.totalWeight}gr)`;
         const hargaStr = item.totalPrice.toLocaleString('id-ID');
         nota_text.push(buatBarisKolom(item.comodity, beratStr, hargaStr));
     });
@@ -134,25 +131,28 @@ const printReceipt = async (receiptData, storageData) => {
     nota_text.push('-'.repeat(lebarKertas));
     nota_text.push(leftRightAlignText("Subtotal", subtotalBeli.toLocaleString('id-ID')));
 
-    // === BAGIAN DISKON ===
+    // === BAGIAN DISKON (LOGIKA DARI PHP) ===
     const daftarDiskon = [];
+    // Kumpulkan diskon manual dari setiap item
     items.forEach(item => {
         if (item.discount > 0) {
             daftarDiskon.push({ nama: `Diskon ${item.comodity}`, nilai: item.discount });
         }
     });
+    // Tambahkan diskon voucher jika ada
     if (summary.voucherDiscount > 0) {
         daftarDiskon.push({ nama: 'Diskon Voucher', nilai: summary.voucherDiscount });
     }
 
+    // Cetak bagian diskon jika ada isinya
     if (daftarDiskon.length > 0) {
         nota_text.push('-'.repeat(lebarKertas));
-        nota_text.push(ESC + "E" + String.fromCharCode(1));
+        nota_text.push(ESC + "E" + String.fromCharCode(1)); // Bold ON
         nota_text.push("DISKON");
+        nota_text.push(ESC + "E" + String.fromCharCode(0)); // Bold OFF
         daftarDiskon.forEach(d => {
             nota_text.push(leftRightAlignText(d.nama, `-${d.nilai.toLocaleString('id-ID')}`));
         });
-        nota_text.push(ESC + "E" + String.fromCharCode(0));
     }
     
     // === TOTAL & FOOTER ===
@@ -173,8 +173,8 @@ const printReceipt = async (receiptData, storageData) => {
 
     // --- REDIRECT KE RAWBT ---
     const finalReceiptText = nota_text.join('\n');
-    const base64String = btoa(finalReceiptText);
-    window.location.href = `rawbt:base64,${base64String}`;
+    const encodedText = encodeURIComponent(finalReceiptText);
+    window.location.href = `rawbt:${encodedText}`;
 
   } catch (error) {
     console.error("Gagal mencetak struk:", error);
@@ -429,9 +429,10 @@ const TransactionModal = () => {
     try {
       const response = await fetchTransaction(summaryData);
       if (response && response.success) {
-        // Data item di sini sudah berisi harga asli (totalPrice), dan diskon manual (discount)
+        // Siapkan data untuk struk
         const receiptItems = resultCountPrice.map((item, index) => ({
             ...item,
+            // 'discount' di sini adalah diskon manual yang diberikan
             discount: discounts[index] || 0,
         }));
         const receiptData = { 
@@ -439,11 +440,14 @@ const TransactionModal = () => {
             summary: summaryData, 
             transactionNumber: response.transactionNumber 
         };
-        // Memanggil printReceipt dengan data storage
+        // Panggil fungsi cetak dengan data storage
         await printReceipt(receiptData, getStorageData());
         handleCloseModal();
       }
-    } catch (error) {}
+    } catch (error) {
+        console.error("Gagal menyimpan transaksi:", error);
+        Swal.fire({ icon: 'error', title: 'Gagal Menyimpan', text: 'Terjadi kesalahan saat menyimpan transaksi.' });
+    }
   };
   const numpadKeys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '000', '0', '500'];
   const renderConfirmButtonText = () => {
