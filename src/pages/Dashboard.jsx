@@ -445,7 +445,7 @@ const TransactionModal = () => {
   const numpadKeys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '000', '0', '500'];
   const renderConfirmButtonText = () => {
     if (change >= 0 && paymentAmount !== '0' && grandTotal > 0) {
-      return (<div className="d-flex flex-column lh-1">Selesaikan Transaksi<span className="fw-normal mt-1" style={{ fontSize: '1rem' }}>Kembalian Rp {change.toLocaleString('id-ID')}</span></div>);
+      return (<div className="d-flex flex-column lh-1">Selesaikan Transaksi<span className="fw-normal mt-1" style={{ fontSize: '1.3rem' }}>Kembalian Rp {change.toLocaleString('id-ID')}</span></div>);
     }
     return 'Selesaikan Transaksi';
   };
@@ -497,9 +497,18 @@ const TransactionModal = () => {
                 </div>
                 <div className="pos-summary-column">
                   <div className="summary-group-box">
-                    <div className="summary-group-row"><span className="summary-label">Subtotal</span><span className="summary-value">{subtotal.toLocaleString('id-ID')}</span></div>
-                    <div className="summary-group-row"><span className="summary-label">Diskon Item</span><span className="summary-value discount">- {totalDiscount.toLocaleString('id-ID')}</span></div>
-                    <div className="summary-group-row grand-total-row"><span className="summary-label">Grand Total</span><span className="summary-value">{grandTotal.toLocaleString('id-ID')}</span></div>
+                    <div className="summary-group-row">
+                      <span className="summary-label">Subtotal</span>
+                      <span className="summary-value">{subtotal.toLocaleString('id-ID')}</span>
+                    </div>
+                    <div className="summary-group-row">
+                      <span className="summary-label">Diskon Item</span>
+                      <span className="summary-value discount">- {totalDiscount.toLocaleString('id-ID')}</span>
+                    </div>
+                    <div className="summary-group-row grand-total-row">
+                      <span className="summary-label">Grand Total</span>
+                      <span className="summary-value">{grandTotal.toLocaleString('id-ID')}</span>
+                    </div>
                   </div>
                   <div className="summary-item input-item" onClick={() => setActiveInput('payment')} style={{ borderColor: activeInput === 'payment' ? '#0d6efd' : '#dee2e6' }}>
                     <label className="summary-label">Uang Dibayar</label>

@@ -459,7 +459,7 @@ input[type=range].custom-slider-input::-moz-range-thumb {
 
 .cart-item-card .item-name { 
   font-weight: 700; 
-  font-size: 1.3rem; /* Ditingkatkan dari 0.9rem */
+  font-size: 1.5rem; /* Ditingkatkan dari 0.9rem */
   background-color: black; 
   color: white; 
   padding: 6px 8px; /* Ditingkatkan dari 4px 5px */
@@ -471,7 +471,7 @@ input[type=range].custom-slider-input::-moz-range-thumb {
 } 
 
 .cart-item-card .item-details { 
-  font-size: 1.1rem; /* Ditingkatkan dari 0.8rem */
+  font-size: 1.3rem; /* Ditingkatkan dari 0.8rem */
   color: #343a40; 
   font-weight: 700; 
   margin-top: 5px; /* Ditingkatkan dari 3px */
@@ -503,7 +503,7 @@ input[type=range].custom-slider-input::-moz-range-thumb {
 } 
 
 .cart-item-discount .label { 
-  font-size: 0.9rem; /* Ditingkatkan dari 0.7rem */
+  font-size: 1.3rem; /* Ditingkatkan dari 0.7rem */
   font-weight: 700; 
   color: white; 
   background-color: black; 
@@ -521,7 +521,7 @@ input[type=range].custom-slider-input::-moz-range-thumb {
 } 
 
 .cart-item-discount .diskon-level { 
-  font-size: 1.1rem; /* Ditingkatkan dari 0.9rem */
+  font-size: 1.5rem; /* Ditingkatkan dari 0.9rem */
   font-weight: 700; 
   color: black; 
   padding: 0 8px; /* Ditingkatkan dari 0 5px */
@@ -557,7 +557,7 @@ input[type=range].custom-slider-input::-moz-range-thumb {
   background-color: #dc3545; 
   color: white; 
   font-weight: 700; 
-  font-size: 1.1rem; /* Ditingkatkan dari 0.9rem */
+  font-size: 1.5rem; /* Ditingkatkan dari 0.9rem */
   padding: 4px 8px; /* Ditingkatkan dari 2px 6px */
   border-radius: 8px; /* Ditingkatkan dari 5px */
   margin-top: 8px; /* Ditingkatkan dari 5px */
@@ -648,11 +648,11 @@ input[type=range].custom-slider-input::-moz-range-thumb {
 }
 
 .numpad-btn.btn-clear {
-  margin-top: 0.75rem;
+  margin-top: 1rem;
   background-color: #fff1f2;
   color: #e64980;
   border-color: #ffb6c1;
-  font-size: 1.2rem;
+  font-size: 1,7rem;
   font-weight: bold;
 }
 
@@ -662,7 +662,7 @@ input[type=range].custom-slider-input::-moz-range-thumb {
   color: white;
   border-color: #28a745;
   height: 80px;
-  font-size: 1.3rem;
+  font-size: 1.7rem;
   font-weight: bold;
 }
 
@@ -757,4 +757,39 @@ input[type=range].custom-slider-input::-moz-range-thumb {
 
 .summary-input.phone {
   font-size: 1rem;
+}
+
+/* === MODIFIKASI UNTUK UKURAN FONT DI SUMMARY BOX (TAMBAHAN) === */
+
+/* Atur ukuran font default untuk label dan nilai */
+.summary-label {
+  font-weight: bold;
+  font-size: 1.2rem; /* Diperbesar dari 1rem */
+  color: #495057;
+}
+
+.summary-value {
+  font-weight: bold;
+  font-size: 1.2rem; /* Diperbesar dari 1.1rem */
+  text-align: right;
+}
+
+/* Ukuran font untuk input (Uang Dibayar & No Telepon) */
+.summary-input {
+  text-align: right;
+  font-weight: bold;
+  font-size: 1.5rem; /* Diperbesar dari 1.2rem */
+  color: #212529;
+  width: 100%;
+}
+
+.summary-input.phone {
+  font-size: 1.5rem; /* Samakan ukurannya agar konsisten */
+}
+
+/* Beri penekanan khusus pada Grand Total */
+.summary-group-row.grand-total-row .summary-label,
+.summary-group-row.grand-total-row .summary-value {
+  font-size: 1.5rem; /* Diperbesar dari 1.2rem */
+  font-weight: bold;
 }
