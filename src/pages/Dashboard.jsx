@@ -175,7 +175,7 @@ const printReceipt = async (receiptData, storageData) => {
     // --- REDIRECT KE RAWBT ---
     const finalReceiptText = nota_text.join('\n');
     const encodedText = encodeURIComponent(finalReceiptText);
-    window.location.href = `rawbt:${encodedText}`;
+    window.location.href = `rawbt:base64,${base64String}`;
 
   } catch (error) {
     console.error("Gagal mencetak struk:", error);
