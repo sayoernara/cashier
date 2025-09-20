@@ -65,19 +65,6 @@ const printReceipt = async (receiptData, storageData) => {
     const nota_text = [];
     nota_text.push(ESC + "@"); // Inisialisasi
     nota_text.push(GS + "L" + String.fromCharCode(0) + String.fromCharCode(0)); // Margin Kiri
-
-    const centerText = (text, isDoubleWidth = false) => {
-      const printedWidth = isDoubleWidth ? text.length * 2 : text.length;
-      if (printedWidth > lebarKertas) {
-        return text; // Hindari padding jika teks sudah lebih lebar dari kertas
-      }
-      const padding = Math.floor((lebarKertas - printedWidth) / 2);
-      return ' '.repeat(Math.max(0, padding)) + text;
-    };
-
-    const rightAlignText = (text) => {
-        return text.toString().padStart(lebarKertas, ' ');
-    };
     
     const leftRightAlignText = (left, right) => {
         return left.padEnd(lebarKertas - right.length) + right;
@@ -100,20 +87,29 @@ const printReceipt = async (receiptData, storageData) => {
     };
 
     // === HEADER ===
-    // Mengatur teks menjadi double height & double width (ukuran besar)
-    nota_text.push(ESC + "!" + String.fromCharCode(48));
-    // Panggil centerText dengan memberitahu bahwa teks ini double-width
-    nota_text.push(centerText("SAYOERNARA", true));
-    // Mereset teks kembali ke ukuran normal
-    nota_text.push(ESC + "!" + String.fromCharCode(0));
+    // Gunakan perintah alignment bawaan printer untuk hasil yang presisi
+    nota_text.push(ESC + "a" + String.fromCharCode(1)); // 1 = Center Alignment
+    nota_text.push(GS + "!" + String.fromCharCode(17)); // Double Height & Width (0x11)
+    nota_text.push("SAYOERNARA");
+
+    // Reset font ke normal dan kurangi spasi baris untuk menghilangkan gap
+    nota_text.push(GS + "!" + String.fromCharCode(0));  // Normal Size
+    nota_text.push(ESC + "!" + String.fromCharCode(0)); // Reset font mode
+    nota_text.push(ESC + "3" + String.fromCharCode(24)); // Set line spacing lebih rapat (24 dots)
+
+    nota_text.push("SAYUR GROSIR DAN ECERAN");
+    nota_text.push("08/22334455/10");
     
-    nota_text.push(centerText("SAYUR GROSIR DAN ECERAN"));
-    nota_text.push(centerText("08/22334455/10"));
-    nota_text.push(ESC + "G" + String.fromCharCode(0) + ESC + "E" + String.fromCharCode(0));
+    // Reset spasi baris ke default sebelum lanjut
+    nota_text.push(ESC + "2");
     
     const namaTitik = (storageData.decryptloc || '???').toUpperCase();
-    nota_text.push(centerText(namaTitik));
+    nota_text.push(namaTitik);
+    
+    // Kembalikan alignment ke kiri untuk sisa struk
+    nota_text.push(ESC + "a" + String.fromCharCode(0)); // 0 = Left Alignment
     nota_text.push('-'.repeat(lebarKertas));
+
 
     // === INFO TRANSAKSI ===
     const noPelanggan = summary.phoneNumber || '-';
@@ -165,9 +161,12 @@ const printReceipt = async (receiptData, storageData) => {
     nota_text.push(leftRightAlignText("BAYAR", summary.paymentAmount.toLocaleString('id-ID')));
     nota_text.push(leftRightAlignText("KEMBALI", summary.change.toLocaleString('id-ID')));
     nota_text.push('-'.repeat(lebarKertas));
-    nota_text.push(centerText("TERIMAKASIH"));
-    nota_text.push(centerText("TELAH BERBELANJA DI SAYOERNARA"));
-    nota_text.push(centerText("SAMPAI JUMPA LAGI :)"));
+    
+    // Bagian footer kembali ke tengah
+    nota_text.push(ESC + "a" + String.fromCharCode(1)); // 1 = Center Alignment
+    nota_text.push("TERIMAKASIH");
+    nota_text.push("TELAH BERBELANJA DI SAYOERNARA");
+    nota_text.push("SAMPAI JUMPA LAGI :)");
     
     // Perintah potong
     nota_text.push(GS + "V" + String.fromCharCode(66) + String.fromCharCode(0));
@@ -449,7 +448,7 @@ const TransactionModal = () => {
   const numpadKeys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '000', '0', '500'];
   const renderConfirmButtonText = () => {
     if (change >= 0 && paymentAmount !== '0' && grandTotal > 0) {
-      return (<div className="d-flex flex-column lh-1">Selesaikan Transaksi<span className="fw-normal mt-1" style={{ fontSize: '1rem' }}>Kembalian Rp {change.toLocaleString('id-ID')}</span></div>);
+      return (<div className="d-flex flex-column lh-1">Selesaikan Transaksi<span className="fw-normal mt-1" style={{ fontSize: '1.3rem' }}>Kembalian Rp {change.toLocaleString('id-ID')}</span></div>);
     }
     return 'Selesaikan Transaksi';
   };
@@ -501,9 +500,18 @@ const TransactionModal = () => {
                 </div>
                 <div className="pos-summary-column">
                   <div className="summary-group-box">
-                    <div className="summary-group-row"><span className="summary-label">Subtotal</span><span className="summary-value">{subtotal.toLocaleString('id-ID')}</span></div>
-                    <div className="summary-group-row"><span className="summary-label">Diskon Item</span><span className="summary-value discount">- {totalDiscount.toLocaleString('id-ID')}</span></div>
-                    <div className="summary-group-row grand-total-row"><span className="summary-label">Grand Total</span><span className="summary-value">{grandTotal.toLocaleString('id-ID')}</span></div>
+                    <div className="summary-group-row">
+                      <span className="summary-label">Subtotal</span>
+                      <span className="summary-value">{subtotal.toLocaleString('id-ID')}</span>
+                    </div>
+                    <div className="summary-group-row">
+                      <span className="summary-label">Diskon Item</span>
+                      <span className="summary-value discount">- {totalDiscount.toLocaleString('id-ID')}</span>
+                    </div>
+                    <div className="summary-group-row grand-total-row">
+                      <span className="summary-label">Grand Total</span>
+                      <span className="summary-value">{grandTotal.toLocaleString('id-ID')}</span>
+                    </div>
                   </div>
                   <div className="summary-item input-item" onClick={() => setActiveInput('payment')} style={{ borderColor: activeInput === 'payment' ? '#0d6efd' : '#dee2e6' }}>
                     <label className="summary-label">Uang Dibayar</label>
