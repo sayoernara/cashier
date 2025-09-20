@@ -188,7 +188,6 @@ function MainLayout() {
       const activeCart = getCartFromStorage(activeCustomerIndex);
       if (activeCart.length === 0) {
         setResultCounPrice([]);
-        // Jika keranjang kosong dan modal masih terbuka, tutup modalnya
         if (showModal) {
             handleCloseModal();
         }
@@ -201,7 +200,7 @@ function MainLayout() {
     } finally {
       setLoadingCountPrice(false);
     }
-  }, [currentCustomer, showModal]); // Tambahkan showModal sebagai dependency
+  }, [currentCustomer, showModal]);
 
   const removeFromCart = (comodityToRemove) => {
     const updatedCart = cart.filter(
@@ -210,8 +209,6 @@ function MainLayout() {
     setCart(updatedCart);
     saveCartToStorage(currentCustomer, updatedCart);
     
-    // Setelah menghapus, selalu panggil fetchCountPrice untuk update UI
-    // fetchCountPrice sudah punya logika untuk menutup modal jika keranjang jadi kosong
     if (showModal) {
         fetchCountPrice(currentCustomer);
     }

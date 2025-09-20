@@ -209,8 +209,8 @@ const CustomWeightModal = ({ show, onHide, itemId, itemName }) => {
             const presetPrice = getPrice(preset.value);
             return (
               <Button key={preset.value} variant="dark" className="m-2 d-flex flex-column justify-content-center align-items-center preset-weight-btn" onClick={() => handlePresetAddToCart(preset.value, presetPrice)} disabled={presetPrice === 0 || loadingGoodsPrice}>
-                <span className="fw-bold" style={{ fontSize: '1rem' }}>{preset.label}</span>
-                {presetPrice > 0 ? <small style={{ fontSize: '0.85rem' }}>Rp {presetPrice.toLocaleString('id-ID')}</small> : <small className="text-muted">N/A</small>}
+                <span className="fw-bold" style={{ fontSize: '1.3rem' }}>{preset.label}</span>
+                {presetPrice > 0 ? <small style={{ fontSize: '1rem' }}>Rp {presetPrice.toLocaleString('id-ID')}</small> : <small className="text-muted">N/A</small>}
               </Button>
             );
           })}

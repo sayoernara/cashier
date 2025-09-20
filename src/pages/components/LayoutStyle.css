@@ -189,6 +189,45 @@ body::-webkit-scrollbar {
   border: 1px solid #2c3e50;
 }
 
+/* --- Styles for Retur Component --- */
+.retur-header-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1.5rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #dee2e6;
+  gap: 1rem;
+}
+
+.retur-header-title {
+  font-size: 2.25rem;
+  font-weight: bold;
+  margin: 0;
+}
+
+.retur-back-button {
+  background-color: #5a6268;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.8rem 1.5rem;
+  font-size: 1.1rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.retur-back-button:hover {
+  transform: scale(1.05);
+}
+
+
 /* --- Media Queries for Responsiveness --- */
 
 /* --- Untuk Layar Besar (1600px ke atas) --- */

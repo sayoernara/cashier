@@ -8,9 +8,9 @@ import { FaShoppingBag, FaBalanceScale } from 'react-icons/fa';
 import './Dashboard.css';
 import Swal from 'sweetalert2';
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { Pagination } from 'swiper/modules';
+// import { Pagination } from 'swiper/modules'; // DIHAPUS
 import 'swiper/css';
-import 'swiper/css/pagination';
+// import 'swiper/css/pagination'; // DIHAPUS
 
 // A simple hook to get window dimensions for responsive design
 const useWindowSize = () => {
@@ -149,12 +149,10 @@ function Retur() {
     const [currentView, setCurrentView] = useState('transaction');
     const [selectionMode, setSelectionMode] = useState('jual');
     
-    // State baru untuk trigger konfirmasi otomatis
     const [isConfirming, setIsConfirming] = useState(false);
 
-    // RESPONSIVE CHANGE: Get window width to apply conditional styles
     const { width } = useWindowSize();
-    const isMobile = width < 992; // Use Bootstrap's 'lg' breakpoint
+    const isMobile = width < 992; 
 
     const resetWeightSelectionState = () => {
         setKgValue(0);
@@ -437,53 +435,23 @@ function Retur() {
         itemDetails: { fontSize: '0.9rem', color: '#9CA3AF' },
         itemPrice: { fontWeight: 'bold', fontSize: '1.1rem', color: '#4F46E5' },
         itemPriceContainer: { display: 'flex', alignItems: 'center', gap: '0.5rem' },
-        headerContainer: {
-            display: 'flex',
-            flexWrap: 'wrap',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '1.5rem',
-            paddingBottom: '1rem',
-            borderBottom: '1px solid #dee2e6',
-            gap: '1rem'
-        },
-        headerTitle: {
-            fontSize: '1.75rem',
-            fontWeight: 'bold',
-            margin: 0,
-        },
-        backButton: {
-            backgroundColor: '#5a6268',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            padding: '0.6rem 1rem',
-            fontSize: '0.9rem',
-            fontWeight: '500',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            cursor: 'pointer'
-        }
     };
 
     if (currentView === 'productSelection') {
         return (
             <div className="container-fluid" style={styles.page}>
-                <div style={styles.headerContainer}>
-                    <h2 style={styles.headerTitle}>
+                <div className="retur-header-container">
+                    <h2 className="retur-header-title">
                         {selectionMode === 'jual' ? 'Pilih Item Baru' : 'Pilih item yang Dikembalikan'}
                     </h2>
-                    <button style={styles.backButton} onClick={() => navigateTo('transaction')}>
-                        <BiArrowBack /> Kembali ke Dasboard Tukar
+                    <button className="retur-back-button" onClick={() => navigateTo('transaction')}>
+                        <BiArrowBack size={24} /> Kembali ke Dasboard Tukar
                     </button>
                 </div>
                 {loadingGoods ? (<div className="text-center p-5"><Spinner animation="border" /></div>) : (
                     <Swiper
-                        modules={[Pagination]}
                         spaceBetween={20}
                         slidesPerView={1}
-                        pagination={{ clickable: true }}
                         className="swiper-container"
                     >
                         {pages.map((page, pageIndex) => (
