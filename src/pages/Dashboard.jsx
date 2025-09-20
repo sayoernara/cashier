@@ -1,11 +1,13 @@
-import React, { useCallback, useState, useContext, useMemo, useEffect } from 'react';
-import { getGoodsPricePerGram, getVoucherByphone } from './apis/api';
-// Modal dan Form dihapus dari import karena tidak lagi digunakan
+import React, { useCallback, useState, useContext, useMemo, useEffect, useRef } from 'react';
+import sfx from '../assets/sfx.mp3'; // Import the sound file with the corrected path
+
+// Pastikan getStorageData diimpor untuk mendapatkan info kasir dan lokasi
+import { getGoodsPricePerGram, getVoucherByphone, getStorageData } from './apis/api';
 import { Alert, Col, Row, Spinner, Card, Button } from 'react-bootstrap';
 import { CiImageOff } from 'react-icons/ci';
-import { GoodsContext } from './components/GoodsContext';
+import { GoodsContext } from './components/GoodsContext'; // Adjusted path assuming GoodsContext is in src/components
 import { FaShoppingBag, FaBalanceScale } from 'react-icons/fa';
-import './Dashboard.css';
+import './Dashboard.css'; // Adjusted path assuming Dashboard.css is in src/
 import Swal from 'sweetalert2';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Pagination } from 'swiper/modules';
@@ -34,13 +36,12 @@ const modalStyles = {
     transition: 'transform 0.3s ease',
     overflow: 'hidden'
   },
-  // KODE BARU: Style untuk CustomWeightModal
   customWeightContent: {
     backgroundColor: '#ffffff',
     borderRadius: '16px',
     width: '90%',
-    maxWidth: '1300px', // Sesuai dengan size='xl'
-    padding: '1.5rem', // Pengganti padding Modal.Body
+    maxWidth: '1300px',
+    padding: '1.5rem',
     boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)',
     transform: 'scale(0.95)',
     transition: 'transform 0.3s ease',
@@ -53,38 +54,134 @@ const modalStyles = {
   },
 };
 
-// --- FUNGSI HELPER UNTUK CETAK ---
-const printReceipt = async (receiptData) => {
+// --- FUNGSI HELPER UNTUK CETAK (VERSI BARU SESUAI kirim_ke_rawbt.php) ---
+const printReceipt = async (receiptData, storageData) => {
   try {
     const { items, summary, transactionNumber } = receiptData;
-    const receiptWidth = 32;
-    const ESC = '\x1B', GS = '\x1D';
-    const INIT_PRINTER = ESC + '@', BOLD_ON = ESC + 'E' + '\x01', BOLD_OFF = ESC + 'E' + '\x00', CUT_PAPER = GS + 'V' + '\x42' + '\x00';
-    const createLine = (left, right) => {
-      const rightStr = String(right);
-      const remainingSpace = receiptWidth - left.length - rightStr.length;
-      return `${left}${' '.repeat(Math.max(0, remainingSpace))}${rightStr}\n`;
+    const lebarKertas = 32;
+    const ESC = String.fromCharCode(27);
+    const GS = String.fromCharCode(29);
+
+    const nota_text = [];
+    nota_text.push(ESC + "@"); // Inisialisasi
+    nota_text.push(GS + "L" + String.fromCharCode(0) + String.fromCharCode(0)); // Margin Kiri
+    
+    const leftRightAlignText = (left, right) => {
+        return left.padEnd(lebarKertas - right.length) + right;
     };
-    const createCenterLine = (text) => {
-      const remainingSpace = receiptWidth - text.length;
-      return ' '.repeat(Math.floor(remainingSpace / 2)) + text + '\n';
+
+    const buatBarisKolom = (nama, berat, harga) => {
+        const lebarNama = 17;
+        const lebarBerat = 7;
+        const lebarHarga = lebarKertas - lebarNama - lebarBerat;
+
+        let namaTampil = nama;
+        if (nama.length > lebarNama) {
+            namaTampil = nama.substring(0, lebarNama - 2) + '..';
+        }
+
+        const baris = namaTampil.padEnd(lebarNama) +
+                      berat.padStart(lebarBerat) +
+                      harga.padStart(lebarHarga);
+        return baris;
     };
-    let receiptText = INIT_PRINTER + BOLD_ON + createCenterLine('Sayoernara') + BOLD_OFF + createCenterLine('Terima Kasih!') + '-'.repeat(receiptWidth) + '\n';
-    receiptText += createLine(`No: ${transactionNumber}`, '') + createLine(`Tgl: ${new Date().toLocaleString('id-ID')}`, '') + '-'.repeat(receiptWidth) + '\n';
+
+    // === HEADER ===
+    // Gunakan perintah alignment bawaan printer untuk hasil yang presisi
+    nota_text.push(ESC + "a" + String.fromCharCode(1)); // 1 = Center Alignment
+    nota_text.push(GS + "!" + String.fromCharCode(17)); // Double Height & Width (0x11)
+    nota_text.push("SAYOERNARA");
+
+    // Reset font ke normal dan kurangi spasi baris untuk menghilangkan gap
+    nota_text.push(GS + "!" + String.fromCharCode(0));  // Normal Size
+    nota_text.push(ESC + "!" + String.fromCharCode(0)); // Reset font mode
+    nota_text.push(ESC + "3" + String.fromCharCode(24)); // Set line spacing lebih rapat (24 dots)
+
+    nota_text.push("SAYUR GROSIR DAN ECERAN");
+    nota_text.push("08/22334455/10");
+    
+    // Reset spasi baris ke default sebelum lanjut
+    nota_text.push(ESC + "2");
+    
+    const namaTitik = (storageData.decryptloc || '???').toUpperCase();
+    nota_text.push(namaTitik);
+    
+    // Kembalikan alignment ke kiri untuk sisa struk
+    nota_text.push(ESC + "a" + String.fromCharCode(0)); // 0 = Left Alignment
+    nota_text.push('-'.repeat(lebarKertas));
+
+
+    // === INFO TRANSAKSI ===
+    const noPelanggan = summary.phoneNumber || '-';
+    const namaKasir = storageData.decryptuname || 'N/A';
+    nota_text.push(`NO PELANGGAN: ${noPelanggan}`);
+    nota_text.push(`TRANSAKSI   : ${new Date().toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`);
+    nota_text.push(`KASIR       : ${namaKasir}`);
+    nota_text.push('-'.repeat(lebarKertas));
+    
+    // === DAFTAR ITEM ===
+    // Harga asli (subtotal) dihitung dari harga item sebelum diskon manual
+    const subtotalBeli = items.reduce((sum, item) => sum + item.totalPrice, 0);
+    
     items.forEach(item => {
-      const priceAfterDiscount = item.totalPrice - (item.discount || 0);
-      receiptText += createLine(`${item.comodity} (${item.totalWeight} gr)`, `Rp ${priceAfterDiscount.toLocaleString('id-ID')}`);
+        const beratKg = item.totalWeight / 1000;
+        const beratStr = `(${beratKg.toLocaleString('id-ID', {minimumFractionDigits: 1, maximumFractionDigits: 2})}kg)`;
+        const hargaStr = item.totalPrice.toLocaleString('id-ID');
+        nota_text.push(buatBarisKolom(item.comodity, beratStr, hargaStr));
     });
-    receiptText += '-'.repeat(receiptWidth) + '\n' + createLine('Subtotal', `Rp ${summary.subtotal.toLocaleString('id-ID')}`);
-    if (summary.totalDiscount > 0) receiptText += createLine('Diskon', `-Rp ${summary.totalDiscount.toLocaleString('id-ID')}`);
-    receiptText += BOLD_ON + createLine('Grand Total', `Rp ${summary.grandTotal.toLocaleString('id-ID')}`) + BOLD_OFF;
-    receiptText += createLine('Bayar', `Rp ${summary.paymentAmount.toLocaleString('id-ID')}`) + createLine('Kembali', `Rp ${summary.change.toLocaleString('id-ID')}`) + '\n\n' + CUT_PAPER;
-    window.location.href = `rawbt:${encodeURIComponent(receiptText)}`;
+
+    // === SUBTOTAL ===
+    nota_text.push('-'.repeat(lebarKertas));
+    nota_text.push(leftRightAlignText("Subtotal", subtotalBeli.toLocaleString('id-ID')));
+
+    // === BAGIAN DISKON ===
+    const daftarDiskon = [];
+    items.forEach(item => {
+        if (item.discount > 0) {
+            daftarDiskon.push({ nama: `Diskon ${item.comodity}`, nilai: item.discount });
+        }
+    });
+    if (summary.voucherDiscount > 0) {
+        daftarDiskon.push({ nama: 'Diskon Voucher', nilai: summary.voucherDiscount });
+    }
+
+    if (daftarDiskon.length > 0) {
+        nota_text.push('-'.repeat(lebarKertas));
+        nota_text.push(ESC + "E" + String.fromCharCode(1));
+        nota_text.push("DISKON");
+        daftarDiskon.forEach(d => {
+            nota_text.push(leftRightAlignText(d.nama, `-${d.nilai.toLocaleString('id-ID')}`));
+        });
+        nota_text.push(ESC + "E" + String.fromCharCode(0));
+    }
+    
+    // === TOTAL & FOOTER ===
+    nota_text.push('-'.repeat(lebarKertas));
+    nota_text.push(leftRightAlignText("TOTAL", summary.grandTotal.toLocaleString('id-ID')));
+    nota_text.push(leftRightAlignText("BAYAR", summary.paymentAmount.toLocaleString('id-ID')));
+    nota_text.push(leftRightAlignText("KEMBALI", summary.change.toLocaleString('id-ID')));
+    nota_text.push('-'.repeat(lebarKertas));
+    
+    // Bagian footer kembali ke tengah
+    nota_text.push(ESC + "a" + String.fromCharCode(1)); // 1 = Center Alignment
+    nota_text.push("TERIMAKASIH");
+    nota_text.push("TELAH BERBELANJA DI SAYOERNARA");
+    nota_text.push("SAMPAI JUMPA LAGI :)");
+    
+    // Perintah potong
+    nota_text.push(GS + "V" + String.fromCharCode(66) + String.fromCharCode(0));
+
+    // --- REDIRECT KE RAWBT ---
+    const finalReceiptText = nota_text.join('\n');
+    const base64String = btoa(finalReceiptText);
+    window.location.href = `rawbt:base64,${base64String}`;
+
   } catch (error) {
     console.error("Gagal mencetak struk:", error);
     Swal.fire({ icon: 'error', title: 'Gagal Mencetak', text: 'Pastikan aplikasi RawBT sudah terinstall.' });
   }
 };
+
 
 // --- KOMPONEN SLIDER ---
 const CustomRangeSlider = ({ label, value, min, max, step, onChange, price, unit, iconType, onRelease }) => {
@@ -128,8 +225,8 @@ const CustomRangeSlider = ({ label, value, min, max, step, onChange, price, unit
 };
 
 // --- KOMPONEN MODAL UNTUK BERAT CUSTOM (DIPERBARUI) ---
-const CustomWeightModal = ({ show, onHide, itemId, itemName }) => {
-  const { cart, addToCart, removeFromCart } = useContext(GoodsContext);
+const CustomWeightModal = ({ show, onHide, itemId, itemName, onAddToCart }) => {
+  const { cart, removeFromCart } = useContext(GoodsContext);
   const [errorGoodsPrice, setErrorGoodsPrice] = useState(null);
   const [loadingGoodsPrice, setLoadingGoodsPrice] = useState(false);
   const [goodsPrice, setGoodsPrice] = useState([]);
@@ -186,15 +283,15 @@ const CustomWeightModal = ({ show, onHide, itemId, itemName }) => {
   const displayWeight = combinedTotalWeight > 950 ? `${(combinedTotalWeight / 1000).toLocaleString('id-ID', { maximumFractionDigits: 3 })} KG` : `${combinedTotalWeight} GR`;
 
   const handleKgSliderRelease = () => {
-    if (kgValue * 1000 > 0 && priceKg > 0) addToCart(itemName, itemId, kgValue * 1000, priceKg);
+    if (kgValue * 1000 > 0 && priceKg > 0) onAddToCart(itemName, itemId, kgValue * 1000, priceKg);
     setKgValue(0);
   };
   const handleGramSliderRelease = () => {
-    if (gramValue > 0 && priceGram > 0) addToCart(itemName, itemId, gramValue, priceGram);
+    if (gramValue > 0 && priceGram > 0) onAddToCart(itemName, itemId, gramValue, priceGram);
     setGramValue(0);
   };
   const handlePresetAddToCart = (weight, price) => {
-    if (weight > 0 && price > 0) addToCart(itemName, itemId, weight, price);
+    if (weight > 0 && price > 0) onAddToCart(itemName, itemId, weight, price);
   };
 
   if (!show) return null;
@@ -332,8 +429,18 @@ const TransactionModal = () => {
     try {
       const response = await fetchTransaction(summaryData);
       if (response && response.success) {
-        const receiptData = { items: resultCountPrice.map((item, index) => ({ ...item, discount: discounts[index] || 0 })), summary: summaryData, transactionNumber: response.transactionNumber };
-        await printReceipt(receiptData);
+        // Data item di sini sudah berisi harga asli (totalPrice), dan diskon manual (discount)
+        const receiptItems = resultCountPrice.map((item, index) => ({
+            ...item,
+            discount: discounts[index] || 0,
+        }));
+        const receiptData = { 
+            items: receiptItems, 
+            summary: summaryData, 
+            transactionNumber: response.transactionNumber 
+        };
+        // Memanggil printReceipt dengan data storage
+        await printReceipt(receiptData, getStorageData());
         handleCloseModal();
       }
     } catch (error) {}
@@ -341,7 +448,7 @@ const TransactionModal = () => {
   const numpadKeys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '000', '0', '500'];
   const renderConfirmButtonText = () => {
     if (change >= 0 && paymentAmount !== '0' && grandTotal > 0) {
-      return (<div className="d-flex flex-column lh-1">Selesaikan Transaksi<span className="fw-normal mt-1" style={{ fontSize: '1rem' }}>Kembalian Rp {change.toLocaleString('id-ID')}</span></div>);
+      return (<div className="d-flex flex-column lh-1">Selesaikan Transaksi<span className="fw-normal mt-1" style={{ fontSize: '1.3rem' }}>Kembalian Rp {change.toLocaleString('id-ID')}</span></div>);
     }
     return 'Selesaikan Transaksi';
   };
@@ -393,9 +500,18 @@ const TransactionModal = () => {
                 </div>
                 <div className="pos-summary-column">
                   <div className="summary-group-box">
-                    <div className="summary-group-row"><span className="summary-label">Subtotal</span><span className="summary-value">{subtotal.toLocaleString('id-ID')}</span></div>
-                    <div className="summary-group-row"><span className="summary-label">Diskon Item</span><span className="summary-value discount">- {totalDiscount.toLocaleString('id-ID')}</span></div>
-                    <div className="summary-group-row grand-total-row"><span className="summary-label">Grand Total</span><span className="summary-value">{grandTotal.toLocaleString('id-ID')}</span></div>
+                    <div className="summary-group-row">
+                      <span className="summary-label">Subtotal</span>
+                      <span className="summary-value">{subtotal.toLocaleString('id-ID')}</span>
+                    </div>
+                    <div className="summary-group-row">
+                      <span className="summary-label">Diskon Item</span>
+                      <span className="summary-value discount">- {totalDiscount.toLocaleString('id-ID')}</span>
+                    </div>
+                    <div className="summary-group-row grand-total-row">
+                      <span className="summary-label">Grand Total</span>
+                      <span className="summary-value">{grandTotal.toLocaleString('id-ID')}</span>
+                    </div>
                   </div>
                   <div className="summary-item input-item" onClick={() => setActiveInput('payment')} style={{ borderColor: activeInput === 'payment' ? '#0d6efd' : '#dee2e6' }}>
                     <label className="summary-label">Uang Dibayar</label>
@@ -424,7 +540,20 @@ const TransactionModal = () => {
 
 // --- KOMPONEN UTAMA DASHBOARD ---
 function Dashboard() {
-  const { groupedGoods, loadingGoods, errorLoadingGoods, selectedLetter, addToCart } = useContext(GoodsContext);
+  const { groupedGoods, loadingGoods, errorLoadingGoods, selectedLetter, addToCart: originalAddToCart } = useContext(GoodsContext);
+  const audioRef = useRef(new Audio(sfx));
+
+  const playSound = () => {
+    audioRef.current.currentTime = 0;
+    audioRef.current.play().catch(error => {
+      console.error("Gagal memutar audio:", error);
+    });
+  };
+
+  const addToCart = (comodity, id_item, weight_Gr, price_per_Gr) => {
+    originalAddToCart(comodity, id_item, weight_Gr, price_per_Gr);
+    playSound();
+  };
 
   const [showModalCstmW, setShowModalCstmW] = useState(false);
   const [selectedIdItem, setSelectedIdItem] = useState('');
@@ -475,7 +604,7 @@ function Dashboard() {
                               <Card.Title className="product-title-small text-center">{comodity}</Card.Title>
                               <div className="weight-buttons-container d-flex flex-wrap gap-1 mt-2">
                                 {groupedGoods[comodity].map((sub) => (
-                                  <Card key={sub.id_item} className={`text-center flex-fill border-0 shadow-sm overflow-hidden weight-card-small weight-btn-${sub.weight_txt.replace('/', '-')}`} onClick={() => addToCart(comodity, sub.id_item, sub.weight_Gr, sub.price_per_Gr)}>
+                                  <Card key={`${comodity}-${sub.id_item}-${sub.weight_Gr}`} className={`text-center flex-fill border-0 shadow-sm overflow-hidden weight-card-small weight-btn-${sub.weight_txt.replace('/', '-')}`} onClick={() => addToCart(comodity, sub.id_item, sub.weight_Gr, sub.price_per_Gr)}>
                                     <div className="weight-card-header">{sub.weight_txt}</div>
                                     <div className={`weight-card-body ${sub.weight_txt === "Kg" ? 'highlighted' : ''}`}>
                                       <div className="fw-bolder h5 m-0 lh-1">{sub.stock}</div>
@@ -498,7 +627,13 @@ function Dashboard() {
       </Row>
       
       <TransactionModal />
-      <CustomWeightModal show={showModalCstmW} onHide={handleCloseModalCstmW} itemId={selectedIdItem} itemName={selectedItemNm} />
+      <CustomWeightModal 
+        show={showModalCstmW} 
+        onHide={handleCloseModalCstmW} 
+        itemId={selectedIdItem} 
+        itemName={selectedItemNm} 
+        onAddToCart={addToCart} 
+      />
     </div>
   );
 }
