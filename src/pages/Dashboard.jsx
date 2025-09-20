@@ -28,7 +28,7 @@ const modalStyles = {
     width: '95%',
     maxWidth: '1300px',
     height: '100vh',
-    maxHeight: '90vh',
+    maxHeight: '93vh',
     display: 'flex',
     flexDirection: 'column',
     boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)',
@@ -54,32 +54,126 @@ const modalStyles = {
   },
 };
 
-// --- FUNGSI HELPER UNTUK CETAK (VERSI SEMENTARA UNTUK TES) ---
+// --- FUNGSI HELPER UNTUK CETAK (FINAL VERSION) ---
 const printReceipt = async (receiptData, storageData) => {
   try {
-    // Teks sederhana untuk tes
-    let teksTes = "";
-    teksTes += "\x1B\x40"; // Inisialisasi printer
-    teksTes += "\x1B\x61\x01"; // Rata tengah
-    teksTes += "\x1D\x21\x11"; // Ukuran double
-    teksTes += "TES CETAK DASHBOARD\n";
-    teksTes += "\x1D\x21\x00"; // Ukuran normal
-    teksTes += "\n";
-    teksTes += "Jika ini tercetak, koneksi BERHASIL.\n";
-    teksTes += "Masalah ada pada data struk.\n\n\n";
-    teksTes += "\x1D\x56\x42\x00"; // Perintah potong kertas
+    const { items, summary } = receiptData;
+    const lebarKertas = 32;
+    
+    // ESC/POS Commands
+    const CMD_INIT = '\x1B\x40';
+    const CMD_ALIGN_CENTER = '\x1B\x61\x01';
+    const CMD_ALIGN_LEFT = '\x1B\x61\x00';
+    const CMD_DOUBLE_SIZE = '\x1D\x21\x11';
+    const CMD_NORMAL_SIZE = '\x1D\x21\x00';
+    const CMD_BOLD_ON = '\x1B\x45\x01';
+    const CMD_BOLD_OFF = '\x1B\x45\x00';
+    const CMD_TIGHT_SPACING = '\x1B\x33\x18';
+    const CMD_DEFAULT_SPACING = '\x1B\x32';
+    const CMD_CUT = '\x1D\x56\x42\x00';
 
-    // Mengirim data tes ke RawBT menggunakan Base64
-    const base64String = btoa(teksTes);
+    let receiptText = '';
+
+    const leftRightAlignText = (left, right) => {
+        return left.padEnd(lebarKertas - right.length) + right + '\n';
+    };
+
+    const buatBarisKolom = (nama, berat, harga) => {
+        const lebarNama = 17;
+        const lebarBerat = 7;
+        const lebarHarga = lebarKertas - lebarNama - lebarBerat;
+
+        let namaTampil = nama;
+        if (nama.length > lebarNama) {
+            namaTampil = nama.substring(0, lebarNama - 2) + '..';
+        }
+
+        const baris = namaTampil.padEnd(lebarNama) +
+                      berat.padStart(lebarBerat) +
+                      harga.padStart(lebarHarga);
+        return baris + '\n';
+    };
+
+    // === HEADER ===
+    receiptText += CMD_INIT;
+    receiptText += CMD_ALIGN_CENTER;
+    receiptText += CMD_DOUBLE_SIZE;
+    receiptText += 'SAYOERNARA\n';
+    receiptText += CMD_NORMAL_SIZE;
+    receiptText += CMD_TIGHT_SPACING;
+    receiptText += 'SAYUR GROSIR DAN ECERAN\n';
+    receiptText += '08/22334455/10\n';
+    receiptText += CMD_DEFAULT_SPACING;
+    const namaTitik = (storageData.decryptloc || '???').toUpperCase();
+    receiptText += namaTitik + '\n';
+    
+    // === INFO TRANSAKSI ===
+    receiptText += CMD_ALIGN_LEFT;
+    receiptText += '-'.repeat(lebarKertas) + '\n';
+    const noPelanggan = summary.phoneNumber || '-';
+    const namaKasir = storageData.decryptuname || 'N/A';
+    receiptText += `NO PELANGGAN: ${noPelanggan}\n`;
+    receiptText += `TRANSAKSI   : ${new Date().toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}\n`;
+    receiptText += `KASIR       : ${namaKasir}\n`;
+    receiptText += '-'.repeat(lebarKertas) + '\n';
+    
+    // === DAFTAR ITEM ===
+    const subtotalBeli = items.reduce((sum, item) => sum + item.totalPrice, 0);
+    items.forEach(item => {
+        const beratKg = item.totalWeight / 1000;
+        const beratStr = `(${beratKg.toLocaleString('id-ID', {minimumFractionDigits: 1, maximumFractionDigits: 2})}kg)`;
+        const hargaStr = item.totalPrice.toLocaleString('id-ID');
+        receiptText += buatBarisKolom(item.comodity, beratStr, hargaStr);
+    });
+
+    // === SUBTOTAL ===
+    receiptText += '-'.repeat(lebarKertas) + '\n';
+    receiptText += leftRightAlignText("Subtotal", subtotalBeli.toLocaleString('id-ID'));
+
+    // === BAGIAN DISKON ===
+    const daftarDiskon = [];
+    items.forEach(item => {
+        if (item.discount > 0) {
+            daftarDiskon.push({ nama: `Diskon ${item.comodity}`, nilai: item.discount });
+        }
+    });
+    if (summary.voucherDiscount > 0) {
+        daftarDiskon.push({ nama: 'Diskon Voucher', nilai: summary.voucherDiscount });
+    }
+
+    if (daftarDiskon.length > 0) {
+        receiptText += '-'.repeat(lebarKertas) + '\n';
+        receiptText += CMD_BOLD_ON;
+        receiptText += "DISKON\n";
+        receiptText += CMD_BOLD_OFF;
+        daftarDiskon.forEach(d => {
+            receiptText += leftRightAlignText(d.nama, `-${d.nilai.toLocaleString('id-ID')}`);
+        });
+    }
+    
+    // === TOTAL & FOOTER ===
+    receiptText += '-'.repeat(lebarKertas) + '\n';
+    receiptText += leftRightAlignText("TOTAL", summary.grandTotal.toLocaleString('id-ID'));
+    receiptText += leftRightAlignText("BAYAR", summary.paymentAmount.toLocaleString('id-ID'));
+    receiptText += leftRightAlignText("KEMBALI", summary.change.toLocaleString('id-ID'));
+    receiptText += '-'.repeat(lebarKertas) + '\n';
+    
+    // === FOOTER ===
+    receiptText += CMD_ALIGN_CENTER;
+    receiptText += "TERIMAKASIH\n";
+    receiptText += "TELAH BERBELANJA DI SAYOERNARA\n";
+    receiptText += "SAMPAI JUMPA LAGI :)\n\n\n";
+    
+    // Perintah potong
+    receiptText += CMD_CUT;
+
+    // --- REDIRECT KE RAWBT ---
+    const base64String = btoa(receiptText);
     window.location.href = `rawbt:base64,${base64String}`;
 
   } catch (error) {
-    console.error("Gagal melakukan print tes sederhana:", error);
-    Swal.fire({
-        icon: 'error',
-        title: 'Gagal Tes Cetak',
-        text: 'Gagal mengirim data tes sederhana ke RawBT.'
-    });
+    console.error("Gagal mencetak struk:", error);
+    Swal.fire({ icon: 'error', title: 'Gagal Mencetak', text: 'Pastikan aplikasi RawBT sudah terinstall.' });
   }
 };
 
