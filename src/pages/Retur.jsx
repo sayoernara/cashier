@@ -27,12 +27,20 @@ const printReceipt = async (receiptData, number, storageData) => {
     const transactionNumber = number;
     const lebarKertas = 32;
 
-    // Helper functions untuk formatting, meniru gaya PHP
+    // --- ESC/POS Commands ---
+    const CMD_INIT = '\x1B\x40'; // Initialize printer
+    const CMD_ALIGN_CENTER = '\x1B\x61\x01';
+    const CMD_ALIGN_LEFT = '\x1B\x61\x00';
+    const CMD_DOUBLE_SIZE = '\x1D\x21\x11'; // Double height and width
+    const CMD_NORMAL_SIZE = '\x1D\x21\x00'; // Normal size
+    const CMD_CUT = '\x1D\x56\x42\x00'; // Cut paper command
+
+    // Helper functions untuk formatting
     const centerText = (text, width) => {
       const padding = Math.max(0, Math.floor((width - text.length) / 2));
       return ' '.repeat(padding) + text + '\n';
     };
-
+    
     const buatBaris = (kiri, kanan, lebar) => {
       const ruangTersedia = lebar - kanan.length;
       let kiriDipotong = kiri;
@@ -47,7 +55,7 @@ const printReceipt = async (receiptData, number, storageData) => {
       return buatBaris(`${label}`, `: ${nilaiFormat}`, lebar);
     }
     
-    // Memisahkan item yang dikembalikan dan item baru (diambil)
+    // Memisahkan item
     const itemsKembali = items.filter(item => item.type === 'PENGEMBALIAN');
     const itemsBaru = items.filter(item => item.type === 'PENJUALAN');
 
@@ -55,16 +63,25 @@ const printReceipt = async (receiptData, number, storageData) => {
     let receiptText = '';
 
     // === HEADER ===
-    receiptText += centerText('SAYOERNARA', lebarKertas);
-    receiptText += centerText('SAYUR GROSIR DAN ECERAN', lebarKertas);
-    receiptText += centerText('08/223344551/0', lebarKertas);
-    // Asumsi nama titik/lokasi ada di storageData, jika tidak ada ganti dengan teks statis
+    receiptText += CMD_INIT;
+    receiptText += CMD_ALIGN_CENTER;
+    
+    // Make "SAYOERNARA" larger
+    receiptText += CMD_DOUBLE_SIZE;
+    receiptText += 'SAYOERNARA\n';
+    receiptText += CMD_NORMAL_SIZE; // Reset to normal size for the next lines
+
+    receiptText += 'SAYUR GROSIR DAN ECERAN\n';
+    receiptText += '08/223344551/0\n';
     const namaTitik = storageData.decryptloc || 'LOKASI ANDA'; 
-    receiptText += centerText(namaTitik.toUpperCase(), lebarKertas);
+    receiptText += namaTitik.toUpperCase() + '\n';
     receiptText += '-'.repeat(lebarKertas) + '\n';
+    receiptText += CMD_ALIGN_LEFT; // Back to left alignment for transaction details
     
     // === INFO TRANSAKSI ===
-    receiptText += centerText('** BUKTI PENUKARAN **', lebarKertas);
+    receiptText += CMD_ALIGN_CENTER;
+    receiptText += '** BUKTI PENUKARAN **\n';
+    receiptText += CMD_ALIGN_LEFT;
     receiptText += `TRANSAKSI: ${new Date().toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}\n`;
     const kasirLabel = "KASIR";
     receiptText += `${kasirLabel.padEnd(9)}: ${storageData.decryptuname || 'N/A'}\n`;
@@ -123,8 +140,7 @@ const printReceipt = async (receiptData, number, storageData) => {
     
     // Perintah potong kertas
     receiptText += '\n\n';
-    const cutCommand = '\x1D\x56\x42\x00';
-    receiptText += cutCommand;
+    receiptText += CMD_CUT;
 
     // Kirim ke RawBT
     const base64String = btoa(receiptText);
@@ -389,21 +405,15 @@ function Retur() {
     const fetchReturTransaction = async (transactionPayload) => {
         try {
             const response = await saveReturTransaction(transactionPayload);
-            Swal.fire({
-                title: 'Sukses!',
-                text: `Transaksi berhasil dengan nomor: ${response.data.message.number}`,
-                icon: 'success',
-                confirmButtonText: 'OK'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Mengirim data storage (yang berisi nama kasir) ke fungsi printReceipt
-                    printReceipt(transactionPayload, response.data.message.number, getStorageData());
-                    localStorage.setItem("tradeInCarts", JSON.stringify([]));
-                    localStorage.setItem("retur_sell_0", JSON.stringify([]));
-                    setReturSellCart([]); 
-                    setTradeInCart([]);
-                }
-            });
+            
+            // NOTIFIKASI SUKSES DIHAPUS
+            // Langsung jalankan fungsi cetak struk dan bersihkan keranjang
+            printReceipt(transactionPayload, response.data.message.number, getStorageData());
+            localStorage.setItem("tradeInCarts", JSON.stringify([]));
+            localStorage.setItem("retur_sell_0", JSON.stringify([]));
+            setReturSellCart([]); 
+            setTradeInCart([]);
+
         } catch (error) {
             Swal.fire('Error', `Gagal menyimpan transaksi: ${error.message}`, 'error');
         }
@@ -531,7 +541,7 @@ function Retur() {
                                 return (
                                     <Col key={comodity} xs={6} md={4} lg={3} className="product-card-wrapper">
                                         <Card className="shadow-sm border-0 product-card-small h-100">
-                                            <Card.Body className="d-flex flex-column gap-3.5">
+                                            <Card.Body className="d-flex flex-column gap-3.7">
                                                 <div className="item-image-container" onClick={() => handleSelectProduct(representativeItem.id_item, comodity, selectionMode)}>
                                                     {representativeItem.img ? (
                                                     <img
@@ -626,12 +636,14 @@ function Retur() {
                                             min={0} max={20} step={1}
                                             onChange={(e) => setKgValue(parseInt(e.target.value, 10))}
                                             price={priceKg} unit="kg" iconType="kg"
+                                            onRelease={handleConfirmWeight}
                                         />
                                         <CustomRangeSlider
                                             label={`Kelipatan 50 gr (0 - 950 gr)`} value={gramValue}
                                             min={0} max={950} step={50}
                                             onChange={(e) => setGramValue(parseInt(e.target.value, 10))}
                                             price={priceGram} unit="gr" iconType="gr"
+                                            onRelease={handleConfirmWeight}
                                         />
                                     </div>
                                 </div>
