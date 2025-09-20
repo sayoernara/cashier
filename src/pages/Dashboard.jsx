@@ -28,7 +28,7 @@ const modalStyles = {
     width: '95%',
     maxWidth: '1300px',
     height: '100vh',
-    maxHeight: '90vh',
+    maxHeight: '93vh',
     display: 'flex',
     flexDirection: 'column',
     boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)',
@@ -173,8 +173,8 @@ const printReceipt = async (receiptData, storageData) => {
 
     // --- REDIRECT KE RAWBT ---
     const finalReceiptText = nota_text.join('\n');
-    const encodedText = encodeURIComponent(finalReceiptText);
-    window.location.href = `rawbt:${encodedText}`;
+    const base64String = btoa(finalReceiptText);
+    window.location.href = `rawbt:base64,${base64String}`;
 
   } catch (error) {
     console.error("Gagal mencetak struk:", error);
