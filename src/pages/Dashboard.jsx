@@ -66,8 +66,12 @@ const printReceipt = async (receiptData, storageData) => {
     nota_text.push(ESC + "@"); // Inisialisasi
     nota_text.push(GS + "L" + String.fromCharCode(0) + String.fromCharCode(0)); // Margin Kiri
 
-    const centerText = (text) => {
-      const padding = Math.floor((lebarKertas - text.length) / 2);
+    const centerText = (text, isDoubleWidth = false) => {
+      const printedWidth = isDoubleWidth ? text.length * 2 : text.length;
+      if (printedWidth > lebarKertas) {
+        return text; // Hindari padding jika teks sudah lebih lebar dari kertas
+      }
+      const padding = Math.floor((lebarKertas - printedWidth) / 2);
       return ' '.repeat(Math.max(0, padding)) + text;
     };
 
@@ -96,9 +100,13 @@ const printReceipt = async (receiptData, storageData) => {
     };
 
     // === HEADER ===
+    // Mengatur teks menjadi double height & double width (ukuran besar)
     nota_text.push(ESC + "!" + String.fromCharCode(48));
-    nota_text.push(centerText("SAYOERNARA"));
+    // Panggil centerText dengan memberitahu bahwa teks ini double-width
+    nota_text.push(centerText("SAYOERNARA", true));
+    // Mereset teks kembali ke ukuran normal
     nota_text.push(ESC + "!" + String.fromCharCode(0));
+    
     nota_text.push(centerText("SAYUR GROSIR DAN ECERAN"));
     nota_text.push(centerText("08/22334455/10"));
     nota_text.push(ESC + "G" + String.fromCharCode(0) + ESC + "E" + String.fromCharCode(0));
