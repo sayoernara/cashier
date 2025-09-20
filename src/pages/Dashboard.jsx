@@ -28,7 +28,7 @@ const modalStyles = {
     width: '95%',
     maxWidth: '1300px',
     height: '100vh',
-    maxHeight: '93vh',
+    maxHeight: '90vh',
     display: 'flex',
     flexDirection: 'column',
     boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)',
@@ -54,72 +54,89 @@ const modalStyles = {
   },
 };
 
-// --- FUNGSI HELPER UNTUK CETAK (VERSI JAVASCRIPT YANG DIPERBAIKI) ---
-const buildPrintUrl = (receiptData, storageData) => {
+// --- FUNGSI HELPER UNTUK CETAK (VERSI BARU SESUAI kirim_ke_rawbt.php) ---
+const printReceipt = async (receiptData, storageData) => {
   try {
-    const { items, summary } = receiptData;
+    const { items, summary, transactionNumber } = receiptData;
     const lebarKertas = 32;
+    const ESC = String.fromCharCode(27);
+    const GS = String.fromCharCode(29);
 
-    // ESC/POS Commands (Sama seperti sebelumnya)
-    const CMD_INIT = '\x1B\x40';
-    const CMD_ALIGN_CENTER = '\x1B\x61\x01';
-    const CMD_ALIGN_LEFT = '\x1B\x61\x00';
-    const CMD_DOUBLE_SIZE = '\x1D\x21\x11';
-    const CMD_NORMAL_SIZE = '\x1D\x21\x00';
-    const CMD_BOLD_ON = '\x1B\x45\x01';
-    const CMD_BOLD_OFF = '\x1B\x45\x00';
-    const CMD_TIGHT_SPACING = '\x1B\x33\x18';
-    const CMD_DEFAULT_SPACING = '\x1B\x32';
-    const CMD_CUT = '\x1D\x56\x42\x00';
+    const nota_text = [];
+    nota_text.push(ESC + "@"); // Inisialisasi
+    nota_text.push(GS + "L" + String.fromCharCode(0) + String.fromCharCode(0)); // Margin Kiri
 
-    let receiptText = '';
+    const centerText = (text, isDoubleWidth = false) => {
+      const printedWidth = isDoubleWidth ? text.length * 2 : text.length;
+      if (printedWidth > lebarKertas) {
+        return text; // Hindari padding jika teks sudah lebih lebar dari kertas
+      }
+      const padding = Math.floor((lebarKertas - printedWidth) / 2);
+      return ' '.repeat(Math.max(0, padding)) + text;
+    };
 
+    const rightAlignText = (text) => {
+        return text.toString().padStart(lebarKertas, ' ');
+    };
+    
     const leftRightAlignText = (left, right) => {
-        return left.padEnd(lebarKertas - right.length) + right + '\n';
+        return left.padEnd(lebarKertas - right.length) + right;
     };
 
     const buatBarisKolom = (nama, berat, harga) => {
         const lebarNama = 17;
         const lebarBerat = 7;
         const lebarHarga = lebarKertas - lebarNama - lebarBerat;
-        let namaTampil = nama.length > lebarNama ? nama.substring(0, lebarNama - 2) + '..' : nama;
+
+        let namaTampil = nama;
+        if (nama.length > lebarNama) {
+            namaTampil = nama.substring(0, lebarNama - 2) + '..';
+        }
+
         const baris = namaTampil.padEnd(lebarNama) +
                       berat.padStart(lebarBerat) +
                       harga.padStart(lebarHarga);
-        return baris + '\n';
+        return baris;
     };
 
     // === HEADER ===
-    receiptText += CMD_INIT;
-    receiptText += CMD_ALIGN_CENTER;
-    receiptText += CMD_DOUBLE_SIZE;
-    receiptText += 'SAYOERNARA\n';
-    receiptText += CMD_NORMAL_SIZE;
-    receiptText += 'SAYUR GROSIR DAN ECERAN\n';
-    receiptText += '08/22334455/10\n';
-    const namaTitik = (storageData.decryptloc || '???').toUpperCase();
-    receiptText += namaTitik + '\n';
+    // Mengatur teks menjadi double height & double width (ukuran besar)
+    nota_text.push(ESC + "!" + String.fromCharCode(48));
+    // Panggil centerText dengan memberitahu bahwa teks ini double-width
+    nota_text.push(centerText("SAYOERNARA", true));
+    // Mereset teks kembali ke ukuran normal
+    nota_text.push(ESC + "!" + String.fromCharCode(0));
     
+    nota_text.push(centerText("SAYUR GROSIR DAN ECERAN"));
+    nota_text.push(centerText("08/22334455/10"));
+    nota_text.push(ESC + "G" + String.fromCharCode(0) + ESC + "E" + String.fromCharCode(0));
+    
+    const namaTitik = (storageData.decryptloc || '???').toUpperCase();
+    nota_text.push(centerText(namaTitik));
+    nota_text.push('-'.repeat(lebarKertas));
+
     // === INFO TRANSAKSI ===
-    receiptText += CMD_ALIGN_LEFT;
-    receiptText += '-'.repeat(lebarKertas) + '\n';
     const noPelanggan = summary.phoneNumber || '-';
     const namaKasir = storageData.decryptuname || 'N/A';
-    receiptText += `NO PELANGGAN: ${noPelanggan}\n`;
-    receiptText += `TRANSAKSI   : ${new Date().toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}\n`;
-    receiptText += `KASIR       : ${namaKasir}\n`;
-    receiptText += '-'.repeat(lebarKertas) + '\n';
+    nota_text.push(`NO PELANGGAN: ${noPelanggan}`);
+    nota_text.push(`TRANSAKSI   : ${new Date().toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`);
+    nota_text.push(`KASIR       : ${namaKasir}`);
+    nota_text.push('-'.repeat(lebarKertas));
     
-    // === DAFTAR ITEM & SUBTOTAL ===
+    // === DAFTAR ITEM ===
+    // Harga asli (subtotal) dihitung dari harga item sebelum diskon manual
     const subtotalBeli = items.reduce((sum, item) => sum + item.totalPrice, 0);
+    
     items.forEach(item => {
         const beratKg = item.totalWeight / 1000;
         const beratStr = `(${beratKg.toLocaleString('id-ID', {minimumFractionDigits: 1, maximumFractionDigits: 2})}kg)`;
         const hargaStr = item.totalPrice.toLocaleString('id-ID');
-        receiptText += buatBarisKolom(item.comodity, beratStr, hargaStr);
+        nota_text.push(buatBarisKolom(item.comodity, beratStr, hargaStr));
     });
-    receiptText += '-'.repeat(lebarKertas) + '\n';
-    receiptText += leftRightAlignText("Subtotal", subtotalBeli.toLocaleString('id-ID'));
+
+    // === SUBTOTAL ===
+    nota_text.push('-'.repeat(lebarKertas));
+    nota_text.push(leftRightAlignText("Subtotal", subtotalBeli.toLocaleString('id-ID')));
 
     // === BAGIAN DISKON ===
     const daftarDiskon = [];
@@ -133,38 +150,41 @@ const buildPrintUrl = (receiptData, storageData) => {
     }
 
     if (daftarDiskon.length > 0) {
-        receiptText += '-'.repeat(lebarKertas) + '\n';
-        receiptText += CMD_BOLD_ON + "DISKON\n" + CMD_BOLD_OFF;
+        nota_text.push('-'.repeat(lebarKertas));
+        nota_text.push(ESC + "E" + String.fromCharCode(1));
+        nota_text.push("DISKON");
         daftarDiskon.forEach(d => {
-            receiptText += leftRightAlignText(d.nama, `-${d.nilai.toLocaleString('id-ID')}`);
+            nota_text.push(leftRightAlignText(d.nama, `-${d.nilai.toLocaleString('id-ID')}`));
         });
+        nota_text.push(ESC + "E" + String.fromCharCode(0));
     }
     
     // === TOTAL & FOOTER ===
-    receiptText += '-'.repeat(lebarKertas) + '\n';
-    receiptText += leftRightAlignText("TOTAL", summary.grandTotal.toLocaleString('id-ID'));
-    receiptText += leftRightAlignText("BAYAR", summary.paymentAmount.toLocaleString('id-ID'));
-    receiptText += leftRightAlignText("KEMBALI", summary.change.toLocaleString('id-ID'));
-    receiptText += '-'.repeat(lebarKertas) + '\n';
+    nota_text.push('-'.repeat(lebarKertas));
+    nota_text.push(leftRightAlignText("TOTAL", summary.grandTotal.toLocaleString('id-ID')));
+    nota_text.push(leftRightAlignText("BAYAR", summary.paymentAmount.toLocaleString('id-ID')));
+    nota_text.push(leftRightAlignText("KEMBALI", summary.change.toLocaleString('id-ID')));
+    nota_text.push('-'.repeat(lebarKertas));
+    nota_text.push(centerText("TERIMAKASIH"));
+    nota_text.push(centerText("TELAH BERBELANJA DI SAYOERNARA"));
+    nota_text.push(centerText("SAMPAI JUMPA LAGI :)"));
     
-    // === FOOTER ===
-    receiptText += CMD_ALIGN_CENTER;
-    receiptText += "TERIMAKASIH\nTELAH BERBELANJA\n\n\n";
-    receiptText += CMD_CUT;
+    // Perintah potong
+    nota_text.push(GS + "V" + String.fromCharCode(66) + String.fromCharCode(0));
 
-    // --- PERUBAHAN KUNCI: Gunakan encodeURIComponent, bukan btoa ---
-    // Ini meniru cara kerja `urlencode()` di PHP yang lebih andal
-    const encodedText = encodeURIComponent(receiptText);
-    return `rawbt:${encodedText}`;
+    // --- REDIRECT KE RAWBT ---
+    const finalReceiptText = nota_text.join('\n');
+    const encodedText = encodeURIComponent(finalReceiptText);
+    window.location.href = `rawbt:${encodedText}`;
 
   } catch (error) {
-    console.error("Gagal membangun URL cetak:", error);
-    return null;
+    console.error("Gagal mencetak struk:", error);
+    Swal.fire({ icon: 'error', title: 'Gagal Mencetak', text: 'Pastikan aplikasi RawBT sudah terinstall.' });
   }
 };
 
 
-// --- KOMPONEN SLIDER --- (Tidak ada perubahan)
+// --- KOMPONEN SLIDER ---
 const CustomRangeSlider = ({ label, value, min, max, step, onChange, price, unit, iconType, onRelease }) => {
   const [tooltipActive, setTooltipActive] = useState(false);
   const bars = useMemo(() => Array.from({ length: 20 }), []);
@@ -205,8 +225,7 @@ const CustomRangeSlider = ({ label, value, min, max, step, onChange, price, unit
   );
 };
 
-
-// --- KOMPONEN MODAL UNTUK BERAT CUSTOM --- (Tidak ada perubahan)
+// --- KOMPONEN MODAL UNTUK BERAT CUSTOM (DIPERBARUI) ---
 const CustomWeightModal = ({ show, onHide, itemId, itemName, onAddToCart }) => {
   const { cart, removeFromCart } = useContext(GoodsContext);
   const [errorGoodsPrice, setErrorGoodsPrice] = useState(null);
@@ -323,7 +342,6 @@ const CustomWeightModal = ({ show, onHide, itemId, itemName, onAddToCart }) => {
   );
 };
 
-
 // --- KOMPONEN MODAL TRANSAKSI ---
 const TransactionModal = () => {
   const context = useContext(GoodsContext);
@@ -406,74 +424,32 @@ const TransactionModal = () => {
       return newDiscounts;
     });
   };
-
-  // --- PERUBAHAN UTAMA DI FUNGSI INI ---
   const handleConfirmTransaction = async () => {
-    if (change < 0 || !paymentAmount) {
-      return Swal.fire('Pembayaran Kurang', 'Jumlah uang dibayar kurang dari Grand Total.', 'warning');
-    }
-
-    // --- Langkah 1: Buka window blank SEGERA. Browser mengizinkan ini karena merupakan hasil langsung dari klik.
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write('<html><head><title>Mencetak...</title></head><body>Menyimpan transaksi dan menyiapkan struk... Mohon tunggu.</body></html>');
-    } else {
-      Swal.fire('Gagal', 'Browser Anda mungkin memblokir pop-up. Mohon izinkan pop-up untuk situs ini.', 'error');
-      return;
-    }
-
+    if (change < 0 || !paymentAmount) return Swal.fire('Pembayaran Kurang', 'Jumlah uang dibayar kurang dari Grand Total.', 'warning');
     const summaryData = { subtotal, totalDiscount, voucherDiscount, idVoucher, phoneNumber, grandTotal, paymentAmount: parseInt(paymentAmount, 10), change };
-    
     try {
-      // --- Langkah 2: Lakukan proses async (menyimpan data)
       const response = await fetchTransaction(summaryData);
-      
       if (response && response.success) {
+        // Data item di sini sudah berisi harga asli (totalPrice), dan diskon manual (discount)
         const receiptItems = resultCountPrice.map((item, index) => ({
             ...item,
             discount: discounts[index] || 0,
         }));
-        
         const receiptData = { 
             items: receiptItems, 
             summary: summaryData, 
+            transactionNumber: response.transactionNumber 
         };
-        
-        // --- Langkah 3: Bangun URL rawbt dan arahkan window yang tadi dibuka
-        const printUrl = buildPrintUrl(receiptData, getStorageData());
-        
-        if (printUrl && printWindow) {
-          printWindow.location.href = printUrl;
-          // Beri sedikit waktu agar redirect sempat dijalankan sebelum window ditutup
-          setTimeout(() => {
-              if (printWindow && !printWindow.closed) {
-                  printWindow.close();
-              }
-          }, 500);
-        } else if (!printUrl) {
-           printWindow.close(); // Tutup jika gagal membuat URL
-           Swal.fire('Gagal', 'Gagal membuat data struk untuk dicetak.', 'error');
-        }
-        
+        // Memanggil printReceipt dengan data storage
+        await printReceipt(receiptData, getStorageData());
         handleCloseModal();
-      } else {
-         // Jika transaksi gagal, tutup window pop-up dan beri pesan error
-         printWindow.close();
-         Swal.fire('Gagal', 'Gagal menyimpan transaksi ke server.', 'error');
       }
-    } catch (error) {
-      // Jika ada error, tutup window pop-up dan beri pesan error
-      if (printWindow) printWindow.close();
-      console.error("Error saat konfirmasi transaksi:", error);
-      Swal.fire('Error', 'Terjadi kesalahan saat memproses transaksi.', 'error');
-    }
+    } catch (error) {}
   };
-
-
   const numpadKeys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '000', '0', '500'];
   const renderConfirmButtonText = () => {
     if (change >= 0 && paymentAmount !== '0' && grandTotal > 0) {
-      return (<div className="d-flex flex-column lh-1">Selesaikan Transaksi<span className="fw-normal mt-1" style={{ fontSize: '1.3rem' }}>Kembalian Rp {change.toLocaleString('id-ID')}</span></div>);
+      return (<div className="d-flex flex-column lh-1">Selesaikan Transaksi<span className="fw-normal mt-1" style={{ fontSize: '1rem' }}>Kembalian Rp {change.toLocaleString('id-ID')}</span></div>);
     }
     return 'Selesaikan Transaksi';
   };
@@ -525,18 +501,9 @@ const TransactionModal = () => {
                 </div>
                 <div className="pos-summary-column">
                   <div className="summary-group-box">
-                    <div className="summary-group-row">
-                      <span className="summary-label">Subtotal</span>
-                      <span className="summary-value">{subtotal.toLocaleString('id-ID')}</span>
-                    </div>
-                    <div className="summary-group-row">
-                      <span className="summary-label">Diskon Item</span>
-                      <span className="summary-value discount">- {totalDiscount.toLocaleString('id-ID')}</span>
-                    </div>
-                    <div className="summary-group-row grand-total-row">
-                      <span className="summary-label">Grand Total</span>
-                      <span className="summary-value">{grandTotal.toLocaleString('id-ID')}</span>
-                    </div>
+                    <div className="summary-group-row"><span className="summary-label">Subtotal</span><span className="summary-value">{subtotal.toLocaleString('id-ID')}</span></div>
+                    <div className="summary-group-row"><span className="summary-label">Diskon Item</span><span className="summary-value discount">- {totalDiscount.toLocaleString('id-ID')}</span></div>
+                    <div className="summary-group-row grand-total-row"><span className="summary-label">Grand Total</span><span className="summary-value">{grandTotal.toLocaleString('id-ID')}</span></div>
                   </div>
                   <div className="summary-item input-item" onClick={() => setActiveInput('payment')} style={{ borderColor: activeInput === 'payment' ? '#0d6efd' : '#dee2e6' }}>
                     <label className="summary-label">Uang Dibayar</label>
@@ -563,8 +530,7 @@ const TransactionModal = () => {
   );
 };
 
-
-// --- KOMPONEN UTAMA DASHBOARD --- (Tidak ada perubahan)
+// --- KOMPONEN UTAMA DASHBOARD ---
 function Dashboard() {
   const { groupedGoods, loadingGoods, errorLoadingGoods, selectedLetter, addToCart: originalAddToCart } = useContext(GoodsContext);
   const audioRef = useRef(new Audio(sfx));
