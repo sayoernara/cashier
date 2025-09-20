@@ -88,10 +88,13 @@ const printReceipt = async (receiptData, storageData) => {
 
     // === HEADER ===
     // Gunakan perintah alignment bawaan printer untuk hasil yang presisi
+    nota_text.push(ESC + "a" + String.fromCharCode(1)); // 1 = Center Alignment
+    nota_text.push(GS + "!" + String.fromCharCode(17)); // Double Height & Width (0x11)
     nota_text.push("SAYOERNARA");
 
     // Reset font ke normal dan kurangi spasi baris untuk menghilangkan gap
-    nota_text.push(ESC + "!" + String.fromCharCode(0));
+    nota_text.push(GS + "!" + String.fromCharCode(0));  // Normal Size
+    nota_text.push(ESC + "!" + String.fromCharCode(0)); // Reset font mode
     nota_text.push(ESC + "3" + String.fromCharCode(24)); // Set line spacing lebih rapat (24 dots)
 
     nota_text.push("SAYUR GROSIR DAN ECERAN");

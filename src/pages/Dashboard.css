@@ -521,7 +521,7 @@ input[type=range].custom-slider-input::-moz-range-thumb {
 } 
 
 .cart-item-discount .diskon-level { 
-  font-size: 1.5rem; /* Ditingkatkan dari 0.9rem */
+  font-size: 1.3rem; /* Ditingkatkan dari 0.9rem */
   font-weight: 700; 
   color: black; 
   padding: 0 8px; /* Ditingkatkan dari 0 5px */
@@ -535,7 +535,7 @@ input[type=range].custom-slider-input::-moz-range-thumb {
   height: 36px; /* Ditingkatkan dari 30px */
   cursor: pointer; 
   font-weight: bold; 
-  font-size: 1.5rem; /* Ditingkatkan dari 1.3rem */
+  font-size: 1.3rem; /* Ditingkatkan dari 1.3rem */
   display: flex; 
   align-items: center; 
   justify-content: center; 
