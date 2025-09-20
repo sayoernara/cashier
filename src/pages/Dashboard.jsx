@@ -28,7 +28,7 @@ const modalStyles = {
     width: '95%',
     maxWidth: '1300px',
     height: '100vh',
-    maxHeight: '93vh',
+    maxHeight: '90vh',
     display: 'flex',
     flexDirection: 'column',
     boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)',
@@ -54,131 +54,32 @@ const modalStyles = {
   },
 };
 
-// --- FUNGSI HELPER UNTUK CETAK (VERSI BARU SESUAI kirim_ke_rawbt.php) ---
+// --- FUNGSI HELPER UNTUK CETAK (VERSI SEMENTARA UNTUK TES) ---
 const printReceipt = async (receiptData, storageData) => {
   try {
-    const { items, summary, transactionNumber } = receiptData;
-    const lebarKertas = 32;
-    const ESC = String.fromCharCode(27);
-    const GS = String.fromCharCode(29);
+    // Teks sederhana untuk tes
+    let teksTes = "";
+    teksTes += "\x1B\x40"; // Inisialisasi printer
+    teksTes += "\x1B\x61\x01"; // Rata tengah
+    teksTes += "\x1D\x21\x11"; // Ukuran double
+    teksTes += "TES CETAK DASHBOARD\n";
+    teksTes += "\x1D\x21\x00"; // Ukuran normal
+    teksTes += "\n";
+    teksTes += "Jika ini tercetak, koneksi BERHASIL.\n";
+    teksTes += "Masalah ada pada data struk.\n\n\n";
+    teksTes += "\x1D\x56\x42\x00"; // Perintah potong kertas
 
-    const nota_text = [];
-    nota_text.push(ESC + "@"); // Inisialisasi
-    nota_text.push(GS + "L" + String.fromCharCode(0) + String.fromCharCode(0)); // Margin Kiri
-    
-    const leftRightAlignText = (left, right) => {
-        return left.padEnd(lebarKertas - right.length) + right;
-    };
-
-    const buatBarisKolom = (nama, berat, harga) => {
-        const lebarNama = 17;
-        const lebarBerat = 7;
-        const lebarHarga = lebarKertas - lebarNama - lebarBerat;
-
-        let namaTampil = nama;
-        if (nama.length > lebarNama) {
-            namaTampil = nama.substring(0, lebarNama - 2) + '..';
-        }
-
-        const baris = namaTampil.padEnd(lebarNama) +
-                      berat.padStart(lebarBerat) +
-                      harga.padStart(lebarHarga);
-        return baris;
-    };
-
-    // === HEADER ===
-    // Gunakan perintah alignment bawaan printer untuk hasil yang presisi
-    nota_text.push(ESC + "a" + String.fromCharCode(1)); // 1 = Center Alignment
-    nota_text.push(GS + "!" + String.fromCharCode(17)); // Double Height & Width (0x11)
-    nota_text.push("SAYOERNARA");
-
-    // Reset font ke normal dan kurangi spasi baris untuk menghilangkan gap
-    nota_text.push(GS + "!" + String.fromCharCode(0));  // Normal Size
-    nota_text.push(ESC + "!" + String.fromCharCode(0)); // Reset font mode
-    nota_text.push(ESC + "3" + String.fromCharCode(24)); // Set line spacing lebih rapat (24 dots)
-
-    nota_text.push("SAYUR GROSIR DAN ECERAN");
-    nota_text.push("08/22334455/10");
-    
-    // Reset spasi baris ke default sebelum lanjut
-    nota_text.push(ESC + "2");
-    
-    const namaTitik = (storageData.decryptloc || '???').toUpperCase();
-    nota_text.push(namaTitik);
-    
-    // Kembalikan alignment ke kiri untuk sisa struk
-    nota_text.push(ESC + "a" + String.fromCharCode(0)); // 0 = Left Alignment
-    nota_text.push('-'.repeat(lebarKertas));
-
-
-    // === INFO TRANSAKSI ===
-    const noPelanggan = summary.phoneNumber || '-';
-    const namaKasir = storageData.decryptuname || 'N/A';
-    nota_text.push(`NO PELANGGAN: ${noPelanggan}`);
-    nota_text.push(`TRANSAKSI   : ${new Date().toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`);
-    nota_text.push(`KASIR       : ${namaKasir}`);
-    nota_text.push('-'.repeat(lebarKertas));
-    
-    // === DAFTAR ITEM ===
-    // Harga asli (subtotal) dihitung dari harga item sebelum diskon manual
-    const subtotalBeli = items.reduce((sum, item) => sum + item.totalPrice, 0);
-    
-    items.forEach(item => {
-        const beratKg = item.totalWeight / 1000;
-        const beratStr = `(${beratKg.toLocaleString('id-ID', {minimumFractionDigits: 1, maximumFractionDigits: 2})}kg)`;
-        const hargaStr = item.totalPrice.toLocaleString('id-ID');
-        nota_text.push(buatBarisKolom(item.comodity, beratStr, hargaStr));
-    });
-
-    // === SUBTOTAL ===
-    nota_text.push('-'.repeat(lebarKertas));
-    nota_text.push(leftRightAlignText("Subtotal", subtotalBeli.toLocaleString('id-ID')));
-
-    // === BAGIAN DISKON ===
-    const daftarDiskon = [];
-    items.forEach(item => {
-        if (item.discount > 0) {
-            daftarDiskon.push({ nama: `Diskon ${item.comodity}`, nilai: item.discount });
-        }
-    });
-    if (summary.voucherDiscount > 0) {
-        daftarDiskon.push({ nama: 'Diskon Voucher', nilai: summary.voucherDiscount });
-    }
-
-    if (daftarDiskon.length > 0) {
-        nota_text.push('-'.repeat(lebarKertas));
-        nota_text.push(ESC + "E" + String.fromCharCode(1));
-        nota_text.push("DISKON");
-        daftarDiskon.forEach(d => {
-            nota_text.push(leftRightAlignText(d.nama, `-${d.nilai.toLocaleString('id-ID')}`));
-        });
-        nota_text.push(ESC + "E" + String.fromCharCode(0));
-    }
-    
-    // === TOTAL & FOOTER ===
-    nota_text.push('-'.repeat(lebarKertas));
-    nota_text.push(leftRightAlignText("TOTAL", summary.grandTotal.toLocaleString('id-ID')));
-    nota_text.push(leftRightAlignText("BAYAR", summary.paymentAmount.toLocaleString('id-ID')));
-    nota_text.push(leftRightAlignText("KEMBALI", summary.change.toLocaleString('id-ID')));
-    nota_text.push('-'.repeat(lebarKertas));
-    
-    // Bagian footer kembali ke tengah
-    nota_text.push(ESC + "a" + String.fromCharCode(1)); // 1 = Center Alignment
-    nota_text.push("TERIMAKASIH");
-    nota_text.push("TELAH BERBELANJA DI SAYOERNARA");
-    nota_text.push("SAMPAI JUMPA LAGI :)");
-    
-    // Perintah potong
-    nota_text.push(GS + "V" + String.fromCharCode(66) + String.fromCharCode(0));
-
-    // --- REDIRECT KE RAWBT ---
-    const finalReceiptText = nota_text.join('\n');
-    const base64String = btoa(finalReceiptText);
+    // Mengirim data tes ke RawBT menggunakan Base64
+    const base64String = btoa(teksTes);
     window.location.href = `rawbt:base64,${base64String}`;
 
   } catch (error) {
-    console.error("Gagal mencetak struk:", error);
-    Swal.fire({ icon: 'error', title: 'Gagal Mencetak', text: 'Pastikan aplikasi RawBT sudah terinstall.' });
+    console.error("Gagal melakukan print tes sederhana:", error);
+    Swal.fire({
+        icon: 'error',
+        title: 'Gagal Tes Cetak',
+        text: 'Gagal mengirim data tes sederhana ke RawBT.'
+    });
   }
 };
 
