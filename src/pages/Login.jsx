@@ -74,23 +74,19 @@ function Login() {
   };
 
   return (
-    // Container dibuat menjadi flexbox untuk memusatkan Card baik secara vertikal maupun horizontal
     <Container fluid className="min-vh-100 d-flex justify-content-center align-items-center p-3">
       <Card
         style={{
-          maxWidth: '900px',
+          maxWidth: '1200px',
           width: '100%',
-          // Hapus height: '500px' agar tinggi bisa menyesuaikan
           overflow: 'hidden',
-          borderRadius: '15px',
-          boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
+          borderRadius: '20px',
+          boxShadow: '0 6px 20px rgba(0,0,0,0.2)'
         }}
       >
         <Row className="g-0">
-
-          {/* Kiri: Carousel - Sembunyikan pada layar kecil (di bawah md) */}
           <Col md={6} className="d-none d-md-block">
-            <Carousel fade controls={false} indicators={false} interval={3000} style={{ height: '500px' }}>
+            <Carousel fade controls={false} indicators={false} interval={3000} style={{ height: '650px' }}>
               <Carousel.Item className="h-100">
                 <img
                   className="d-block w-100 h-100"
@@ -110,7 +106,7 @@ function Login() {
               <Carousel.Item className="h-100">
                 <img
                   className="d-block w-100 h-100"
-                  src="https://images.unsplash.com/photo-1533321942807-08e4008b2025?q=80&w=459&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+                  src="https://images.unsplash.com/photo-1533321942807-08e4008b2025?q=80&w=459&auto=format&fit=crop&ixlib-rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
                   alt="Sayur 3"
                   style={{ objectFit: 'cover', objectPosition: 'center' }}
                 />
@@ -118,43 +114,48 @@ function Login() {
             </Carousel>
           </Col>
 
-          {/* Kanan: Form - Mengambil lebar penuh di layar kecil, setengah di layar medium ke atas */}
-          <Col xs={12} md={6} className="d-flex justify-content-center align-items-center p-4 bg-white">
-            <div style={{ maxWidth: '350px', width: '100%' }}>
-              <div className="text-center mb-4">
-                <FaCashRegister size={60} color="#007bff" />
-                <h3 style={{ color: '#3498db' }}>Sayoernara | Cashier App</h3>
+          <Col xs={12} md={6} className="d-flex justify-content-center align-items-center p-5 bg-white">
+            <div style={{ maxWidth: '450px', width: '100%' }}>
+              <div className="text-center mb-5">
+                <FaCashRegister size={100} color="#007bff" />
+                <h1 className="mt-4 fw-bold" style={{ color: '#3498db' }}>Sayoernara | Cashier App</h1>
               </div>
               {error && (
-                <div className="alert alert-danger">{error}</div>
+                <div className="alert alert-danger fs-5">{error}</div>
               )}
               <form onSubmit={handleLogin}>
-                <div className="mb-3">
+                <div className="mb-4">
                   <input
                     type="text"
-                    className={`form-control ${usernameError ? "is-invalid" : ""}`}
+                    className={`form-control form-control-lg ${usernameError ? "is-invalid" : ""}`}
                     placeholder="Username"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
+                    style={{ fontSize: '1.2rem', padding: '1rem' }}
                   />
                 </div>
-                <div className="mb-3 position-relative">
+                <div className="mb-4 position-relative">
                   <input
                     type={showPassword ? "text" : "password"}
-                    className={`form-control ${passwordError ? "is-invalid" : ""}`}
+                    className={`form-control form-control-lg ${passwordError ? "is-invalid" : ""}`}
                     placeholder="Password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    style={{ fontSize: '1.2rem', padding: '1rem' }}
                   />
                   <span
                     className="position-absolute end-0 top-50 translate-middle-y me-3"
-                    style={{ cursor: 'pointer' }}
+                    style={{ cursor: 'pointer', fontSize: '1.5rem' }}
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? <TbEye /> : <TbEyeClosed />}
                   </span>
                 </div>
-                <button type="submit" className="btn btn-primary w-100 py-2">
+                <button
+                  type="submit"
+                  className="btn btn-primary w-100 btn-lg"
+                  style={{ padding: '1rem', fontSize: '1.3rem', fontWeight: 'bold' }}
+                >
                   {loading ? 'Logging in...' : 'Sign In'}
                 </button>
               </form>
@@ -162,7 +163,6 @@ function Login() {
           </Col>
         </Row>
       </Card>
-
     </Container>
   );
 }

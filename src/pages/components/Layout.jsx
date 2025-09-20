@@ -527,19 +527,19 @@ function MainLayout() {
                 cursor: 'pointer',
                 border: '2px solid white',
                 borderRadius: '20px',
-                padding: '20px 24px',
+                padding: '14px 18px',
                 backgroundColor: 'black'
               }}
               to="#"
             >
-              <FaRunning size={40} style={{ transform: 'scaleX(-1)' }} />
+              <FaRunning size={60} style={{ transform: 'scaleX(-1)' }} />
             </Link>
 
             <Button 
               onClick={() => handleSetCustomer(0)}
               style={activeView === 'regular' && activeCustomerForFooter === 0 ? activeButtonStyle : inactiveButtonStyle}
             >
-              <FaUser size={40} />
+              <FaUser size={45} />
             </Button>
             
             <Button 
