@@ -228,7 +228,7 @@ function MainLayout() {
     try {
       const allCarts = JSON.parse(localStorage.getItem("tradeInCarts") || "{}");
       allCarts[customerIndex] = cartData;
-      localStorage.setItem("tradeInCarts", JSON.stringify(allCerts));
+      localStorage.setItem("tradeInCarts", JSON.stringify(allCarts));
     } catch (error) {
       console.error("Gagal menyimpan keranjang tukar tambah:", error);
     }
