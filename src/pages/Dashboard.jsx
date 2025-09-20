@@ -173,7 +173,7 @@ const printReceipt = async (receiptData, storageData) => {
 
     // --- REDIRECT KE RAWBT ---
     const finalReceiptText = nota_text.join('\n');
-    const base64String = btoa(receiptText);
+    const base64String = btoa(finalReceiptText);
     const encodedText = encodeURIComponent(finalReceiptText);
     window.location.href = `rawbt:base64,${base64String}`;
 
