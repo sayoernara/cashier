@@ -8,9 +8,7 @@ import { FaShoppingBag, FaBalanceScale } from 'react-icons/fa';
 import './Dashboard.css';
 import Swal from 'sweetalert2';
 import { Swiper, SwiperSlide } from 'swiper/react';
-// import { Pagination } from 'swiper/modules'; // DIHAPUS
 import 'swiper/css';
-// import 'swiper/css/pagination'; // DIHAPUS
 
 // A simple hook to get window dimensions for responsive design
 const useWindowSize = () => {
@@ -23,45 +21,115 @@ const useWindowSize = () => {
     return { width: size[0], height: size[1] };
 };
 
-const printReceipt = async (receiptData , number) => {
+const printReceipt = async (receiptData, number, storageData) => {
   try {
     const { items, summary } = receiptData;
     const transactionNumber = number;
-    const line = '--------------------------------\n';
+    const lebarKertas = 32;
+
+    // Helper functions untuk formatting, meniru gaya PHP
+    const centerText = (text, width) => {
+      const padding = Math.max(0, Math.floor((width - text.length) / 2));
+      return ' '.repeat(padding) + text + '\n';
+    };
+
+    const buatBaris = (kiri, kanan, lebar) => {
+      const ruangTersedia = lebar - kanan.length;
+      let kiriDipotong = kiri;
+      if (kiri.length > ruangTersedia) {
+        kiriDipotong = kiri.substring(0, ruangTersedia - 2) + '..';
+      }
+      return kiriDipotong.padEnd(ruangTersedia) + kanan + '\n';
+    };
+
+    const buatBarisKalkulasi = (label, nilai, lebar) => {
+      const nilaiFormat = nilai.toLocaleString('id-ID');
+      return buatBaris(`${label}`, `: ${nilaiFormat}`, lebar);
+    }
+    
+    // Memisahkan item yang dikembalikan dan item baru (diambil)
+    const itemsKembali = items.filter(item => item.type === 'PENGEMBALIAN');
+    const itemsBaru = items.filter(item => item.type === 'PENJUALAN');
+
+    // --- MEMBANGUN STRING NOTA ---
     let receiptText = '';
-    receiptText += '       Sayoernara\n';
-    receiptText += `No: ${transactionNumber}\n`;
-    receiptText += `Tgl: ${new Date().toLocaleString('id-ID')}\n`;
-    receiptText += line;
-    items.forEach(item => {
-      const priceAfterDiscount = item.totalPrice - (item.discount || 0);
-      const itemName = `${item.comodity} (${item.totalWeight} gr)`;
-      const itemPrice = `Rp ${priceAfterDiscount.toLocaleString('id-ID')}`;
-      const type = item.type;
-      const receiptWidth = 32;
-      const spaces = receiptWidth - itemName.length - itemPrice.length;
-      receiptText += `${type} --> ${itemName}${' '.repeat(Math.max(0, spaces))}${itemPrice}\n`;
-    });
-    receiptText += line;
-    const formatSummaryLine = (label, value) => {
-      const receiptWidth = 32;
-      const formattedValue = `Rp ${value.toLocaleString('id-ID')}`;
-      const spaces = receiptWidth - label.length - formattedValue.length;
-      return `${label}${' '.repeat(Math.max(0, spaces))}${formattedValue}\n`;
+
+    // === HEADER ===
+    receiptText += centerText('SAYOERNARA', lebarKertas);
+    receiptText += centerText('SAYUR GROSIR DAN ECERAN', lebarKertas);
+    receiptText += centerText('08/223344551/0', lebarKertas);
+    // Asumsi nama titik/lokasi ada di storageData, jika tidak ada ganti dengan teks statis
+    const namaTitik = storageData.decryptloc || 'LOKASI ANDA'; 
+    receiptText += centerText(namaTitik.toUpperCase(), lebarKertas);
+    receiptText += '-'.repeat(lebarKertas) + '\n';
+    
+    // === INFO TRANSAKSI ===
+    receiptText += centerText('** BUKTI PENUKARAN **', lebarKertas);
+    receiptText += `TRANSAKSI: ${new Date().toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}\n`;
+    const kasirLabel = "KASIR";
+    receiptText += `${kasirLabel.padEnd(9)}: ${storageData.decryptuname || 'N/A'}\n`;
+    receiptText += '-'.repeat(lebarKertas) + '\n';
+
+    // === BAGIAN: BARANG DIKEMBALIKAN ===
+    if (itemsKembali.length > 0) {
+        receiptText += 'BARANG DIKEMBALIKAN:\n';
+        itemsKembali.forEach(item => {
+            const hargaAbs = Math.abs(item.originalPrice);
+            receiptText += buatBaris(item.comodity, `: ${hargaAbs.toLocaleString('id-ID')}`, lebarKertas);
+            const beratKg = Math.abs(item.totalWeight) / 1000;
+            receiptText += `  (${beratKg.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg)\n`;
+        });
+        receiptText += '\n';
+        receiptText += buatBarisKalkulasi('Subtotal Kembali', summary.tradeInTotal, lebarKertas);
+        receiptText += '='.repeat(lebarKertas) + '\n';
     }
-    receiptText += formatSummaryLine('Subtotal', summary.subtotal);
+
+    // === BAGIAN: BARANG DIAMBIL (BARU) ===
+    if (itemsBaru.length > 0) {
+        receiptText += 'BARANG DIAMBIL:\n';
+        itemsBaru.forEach(item => {
+            receiptText += buatBaris(item.comodity, `: ${item.originalPrice.toLocaleString('id-ID')}`, lebarKertas);
+            const beratKg = item.totalWeight / 1000;
+            receiptText += `  (${beratKg.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg)\n`;
+        });
+        receiptText += '\n';
+        receiptText += buatBarisKalkulasi('Subtotal Ambil', summary.subtotal, lebarKertas);
+        receiptText += '='.repeat(lebarKertas) + '\n';
+    }
+
+    // === BAGIAN: KALKULASI AKHIR ===
+    receiptText += buatBarisKalkulasi('Total Ambil', summary.subtotal, lebarKertas);
     if (summary.totalDiscount > 0) {
-      receiptText += formatSummaryLine('Diskon', -summary.totalDiscount);
+        receiptText += buatBarisKalkulasi('Diskon', -summary.totalDiscount, lebarKertas);
     }
-    receiptText += formatSummaryLine('Grand Total', summary.grandTotal);
-    receiptText += line;
-    receiptText += formatSummaryLine('Bayar', summary.paymentAmount);
-    receiptText += formatSummaryLine('Kembali', summary.change);
-    receiptText += '\nTerima Kasih!\n\n';
+    receiptText += buatBarisKalkulasi('Kredit Kembali', -summary.tradeInTotal, lebarKertas);
+    receiptText += '-'.repeat(lebarKertas) + '\n';
+
+    const selisih = summary.grandTotal;
+
+    if (selisih > 0) {
+        receiptText += buatBarisKalkulasi('KEKURANGAN BAYAR', selisih, lebarKertas);
+        receiptText += buatBarisKalkulasi('BAYAR (TUNAI)', summary.paymentAmount, lebarKertas);
+        receiptText += buatBarisKalkulasi('KEMBALI', summary.change, lebarKertas);
+    } else {
+        receiptText += buatBarisKalkulasi('UANG KEMBALI', Math.abs(selisih), lebarKertas);
+    }
+
+    // === FOOTER ===
+    receiptText += '-'.repeat(lebarKertas) + '\n';
+    receiptText += centerText('TERIMAKASIH', lebarKertas);
+    receiptText += centerText('TELAH BERBELANJA DI SAYOERNARA', lebarKertas);
+    receiptText += centerText('SAMPAI JUMPA LAGI :)', lebarKertas);
+    
+    // Perintah potong kertas
+    receiptText += '\n\n';
     const cutCommand = '\x1D\x56\x42\x00';
     receiptText += cutCommand;
+
+    // Kirim ke RawBT
     const base64String = btoa(receiptText);
     window.location.href = `rawbt:base64,${base64String}`;
+
   } catch (error) {
     console.error("Gagal mencetak struk:", error);
     Swal.fire({
@@ -328,7 +396,8 @@ function Retur() {
                 confirmButtonText: 'OK'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    printReceipt(transactionPayload, response.data.message.number);
+                    // Mengirim data storage (yang berisi nama kasir) ke fungsi printReceipt
+                    printReceipt(transactionPayload, response.data.message.number, getStorageData());
                     localStorage.setItem("tradeInCarts", JSON.stringify([]));
                     localStorage.setItem("retur_sell_0", JSON.stringify([]));
                     setReturSellCart([]); 
@@ -462,7 +531,7 @@ function Retur() {
                                 return (
                                     <Col key={comodity} xs={6} md={4} lg={3} className="product-card-wrapper">
                                         <Card className="shadow-sm border-0 product-card-small h-100">
-                                            <Card.Body className="d-flex flex-column gap-4">
+                                            <Card.Body className="d-flex flex-column gap-3.5">
                                                 <div className="item-image-container" onClick={() => handleSelectProduct(representativeItem.id_item, comodity, selectionMode)}>
                                                     {representativeItem.img ? (
                                                     <img
