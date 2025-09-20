@@ -21,7 +21,7 @@ const useWindowSize = () => {
     return { width: size[0], height: size[1] };
 };
 
-const printReceipt = async (receiptData, number, storageData) => {
+const printReceipt2 = async (receiptData, number, storageData) => {
   try {
     const { items, summary } = receiptData;
     const transactionNumber = number;
@@ -186,7 +186,7 @@ const CustomRangeSlider = ({ label, value, min, max, step, onChange, price, unit
             const barPercentage = (index / (bars.length - 1)) * 100;
             const isActive = barPercentage <= percentage;
             const height = 10 + barPercentage;
-            return <div key={index} className={`bar ${isActive ? 'active' : ''}`} style={{ height: `${height}%` }} ></div>;
+            return <div key={`${item.comodity}-${item.totalWeight}-${index}`} className={`bar ${isActive ? 'active' : ''}`} style={{ height: `${height}%` }} ></div>;
           })}
         </div>
         <label>{renderIcon()}{label}</label>
@@ -408,7 +408,7 @@ function Retur() {
             
             // NOTIFIKASI SUKSES DIHAPUS
             // Langsung jalankan fungsi cetak struk dan bersihkan keranjang
-            printReceipt(transactionPayload, response.data.message.number, getStorageData());
+            printReceipt2(transactionPayload, response.data.message.number, getStorageData());
             localStorage.setItem("tradeInCarts", JSON.stringify([]));
             localStorage.setItem("retur_sell_0", JSON.stringify([]));
             setReturSellCart([]); 
@@ -754,7 +754,7 @@ function Retur() {
                                     const manualDiscount = isSellItem ? (discounts[item.originalIndex] || 0) : 0;
                                     const priceAfterDiscount = item.totalPrice - manualDiscount;
                                     return (
-                                        <tr key={idx} className="align-middle" style={{backgroundColor: isSellItem ? '' : '#e9f7ef'}}>
+                                        <tr key={`${idx}-${item.comodity}`} className="align-middle" style={{backgroundColor: isSellItem ? '' : '#e9f7ef'}}>
                                             <td><strong>{item.comodity}</strong><div className="text-muted small">{item.totalWeight} gr</div><div className="small fst-italic fw-bold" style={{color: isSellItem ? '#0d6efd' : '#198754'}}>{isSellItem ? "Penjualan" : "Pengembalian"}</div></td>
                                             <td className="text-center">
                                                 {isSellItem ? (
