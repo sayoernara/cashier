@@ -302,7 +302,10 @@ function MainLayout() {
         setCart(updatedCart);
         saveCartToStorage(currentCustomer, updatedCart);
         
-        // **TIDAK ADA RETURN, TIDAK ADA SWAL SUKSES**
+        return {
+          success: true,
+          transactionNumber: response.data.message.number,
+        };
         
       } else {
         throw new Error("Respons dari server tidak valid atau tidak menyertakan nomor transaksi.");

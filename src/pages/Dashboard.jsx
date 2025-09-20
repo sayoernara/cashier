@@ -428,8 +428,8 @@ const TransactionModal = () => {
     const summaryData = { subtotal, totalDiscount, voucherDiscount, idVoucher, phoneNumber, grandTotal, paymentAmount: parseInt(paymentAmount, 10), change };
     try {
       const response = await fetchTransaction(summaryData);
-      if (response && response.success) {
         // Siapkan data untuk struk
+        
         const receiptItems = resultCountPrice.map((item, index) => ({
             ...item,
             // 'discount' di sini adalah diskon manual yang diberikan
@@ -443,7 +443,6 @@ const TransactionModal = () => {
         // Panggil fungsi cetak dengan data storage
         await printReceipt(receiptData, getStorageData());
         handleCloseModal();
-      }
     } catch (error) {
         console.error("Gagal menyimpan transaksi:", error);
         Swal.fire({ icon: 'error', title: 'Gagal Menyimpan', text: 'Terjadi kesalahan saat menyimpan transaksi.' });
