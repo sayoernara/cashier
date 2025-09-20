@@ -462,7 +462,7 @@ function Retur() {
                                 return (
                                     <Col key={comodity} xs={6} md={4} lg={3} className="product-card-wrapper">
                                         <Card className="shadow-sm border-0 product-card-small h-100">
-                                            <Card.Body className="d-flex flex-column gap-3">
+                                            <Card.Body className="d-flex flex-column gap-4">
                                                 <div className="item-image-container" onClick={() => handleSelectProduct(representativeItem.id_item, comodity, selectionMode)}>
                                                     {representativeItem.img ? (
                                                     <img

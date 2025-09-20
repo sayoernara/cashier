@@ -61,11 +61,11 @@ body,
   justify-content: center;
   font-weight: 600;
   margin-bottom: 1.5rem;
-  font-size: 1.1em;        /* Diubah dari 0.9em untuk memperbesar teks dan ikon */
+  font-size: 1.5em;        /* Diubah dari 0.9em untuk memperbesar teks dan ikon */
   background-color: #212529;
   color: white;
-  padding: 8px 25px;       /* Diubah dari 5px 20px untuk menambah ruang */
-  border-radius: 12px;     /* Ditingkatkan dari 8px agar lebih membulat */
+  padding: 11px 30px;       /* Diubah dari 5px 20px untuk menambah ruang */
+  border-radius: 16px;     /* Ditingkatkan dari 8px agar lebih membulat */
 }
 
 .custom-slider-container {
@@ -261,7 +261,7 @@ input[type=range].custom-slider-input::-moz-range-thumb {
 
 .swiper-container {
   width: 100%;
-  height: 70vh;
+  height: 73vh;
   padding-bottom: 40px !important;
   box-sizing: border-box; 
   cursor: grab;
@@ -320,7 +320,8 @@ input[type=range].custom-slider-input::-moz-range-thumb {
   justify-content: center;
   align-items: center;
   height: 150px;
-  margin-bottom: 0.25rem;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
   flex-shrink: 0;
 }
 
@@ -343,7 +344,7 @@ input[type=range].custom-slider-input::-moz-range-thumb {
 .product-title-small {
   font-size: 1.5rem;
   font-weight: bold;
-  margin-bottom: 0.25rem;
+  margin-bottom: 1rem;
   flex-shrink: 0;
 }
 
@@ -396,8 +397,8 @@ input[type=range].custom-slider-input::-moz-range-thumb {
 }
 
 .preset-weight-btn {
-  width: 155px;
-  height: 110px;
+  width: 185px;
+  height: 140px;
   border-radius: 8px;
   padding: 10px 5px;
   line-height: 1.3;
