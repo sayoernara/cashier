@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState, useContext } from 'react';
+import React, { useCallback, useEffect, useState, useContext, useMemo } from 'react';
 import './LayoutStyle.css'
 import { Outlet, useLocation, useNavigate, Link } from 'react-router-dom';
 import Swal from 'sweetalert2';
@@ -35,8 +35,8 @@ const modalStyles = {
     backgroundColor: 'transparent', 
     borderRadius: '16px',
     width: '90%',
-    maxWidth: '1300px', 
-    height: '95vh',
+    maxWidth: '1200px', 
+    height: '100vh',
     display: 'flex',
     flexDirection: 'column',
     transform: 'scale(0.95)',
@@ -55,39 +55,39 @@ const headerStyles = {
     backgroundColor: 'white',
     border: 'none',
     borderRadius: '12px',
-    padding: '10px 18px',
+    padding: '20px 24px',
     color: 'black',
     fontWeight: '700',
-    fontSize: '1.1em',
+    fontSize: '1.3em',
     cursor: 'pointer',
     boxShadow: '0 2px 5px rgba(0, 0, 0, 0.1)',
   },
   alphabetCard: {
     backgroundColor: 'black',
     color: 'white',
-    border: '2px solid #6c757d',
+    border: '1.5px solid #ffffffff',
     borderRadius: '8px',
-    width: '60px',
-    height: '40px',
+    width: '90px',
+    height: '60px',
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
     fontWeight: 'bold',
-    fontSize: '1.1em',
+    fontSize: '1.7em',
     cursor: 'pointer',
   },
   alphabetCardActive: {
-    backgroundColor: '#007bff',
+    backgroundColor: '#088924ff',
     color: 'white',
-    border: '2px solid #007bff',
+    border: '2px solid',
     borderRadius: '8px',
-    width: '60px',
-    height: '40px',
+    width: '95px',
+    height: '60px',
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
     fontWeight: 'bold',
-    fontSize: '1.1em',
+    fontSize: '3em',
     cursor: 'pointer',
   }
 };
@@ -231,7 +231,7 @@ function MainLayout() {
     try {
       const allCarts = JSON.parse(localStorage.getItem("tradeInCarts") || "{}");
       allCarts[customerIndex] = cartData;
-      localStorage.setItem("tradeInCarts", JSON.stringify(allCarts));
+      localStorage.setItem("tradeInCarts", JSON.stringify(allCerts));
     } catch (error) {
       console.error("Gagal menyimpan keranjang tukar tambah:", error);
     }
@@ -337,17 +337,28 @@ function MainLayout() {
     fetchGoods();
   }, [fetchGoods]);
 
-  const groupedGoods = goodsList.reduce((acc, item) => {
-    if (!acc[item.comodity]) {
-      acc[item.comodity] = [];
-    }
-    acc[item.comodity].push(item);
-    return acc;
-  }, {});
+  const groupedGoods = useMemo(() => {
+    if (!goodsList || goodsList.length === 0) return {};
+    return goodsList.reduce((acc, item) => {
+        if (!acc[item.comodity]) {
+            acc[item.comodity] = [];
+        }
+        acc[item.comodity].push(item);
+        return acc;
+    }, {});
+  }, [goodsList]);
 
-  const alphabet = Array.from(
-    new Set(Object.keys(groupedGoods).map(c => c[0].toUpperCase()))
-  ).sort();
+  const alphabet = useMemo(() => {
+    const letters = new Set();
+    Object.keys(groupedGoods).forEach(comodity => {
+        comodity.split(' ').flatMap(word => word.charAt(0).toUpperCase()).forEach(letter => {
+          if (letter) {
+            letters.add(letter);
+          }
+        });
+    });
+    return Array.from(letters).sort();
+  }, [groupedGoods]);
 
   React.useEffect(() => {
     if (location.pathname.startsWith('/settings')) {
@@ -423,7 +434,8 @@ function MainLayout() {
     backgroundColor: 'white',
     color: '#6c757d',
     borderColor: '#dee2e6',
-    padding: '4px 12px',
+    borderRadius: '20px',
+    padding: '20px 24px',
     fontSize: '1.5rem',
     fontWeight: 'bold',
     lineHeight: 1,
@@ -436,7 +448,8 @@ function MainLayout() {
     backgroundColor: 'black',
     color: 'white',
     borderColor: 'white',
-    padding: '4px 12px',
+    borderRadius: '20px',
+    padding: '20px 24px',
     fontSize: '1.5rem',
     fontWeight: 'bold',
     lineHeight: 1,
@@ -514,8 +527,8 @@ function MainLayout() {
               style={{ 
                 cursor: 'pointer',
                 border: '2px solid white',
-                borderRadius: '8px',
-                padding: '4px 12px',
+                borderRadius: '20px',
+                padding: '20px 24px',
                 backgroundColor: 'black'
               }}
               to="#"
@@ -550,11 +563,12 @@ function MainLayout() {
               style={{
                   backgroundColor: 'black',
                   borderColor: 'white',
-                  padding: '4px 12px'
+                  borderRadius: '20px',
+                  padding: '10px 24px'
               }}
             >
               <div style={{ position: 'relative' }}>
-                <img src={CustomCartIcon} alt="Pembayaran" style={{ height: '40px' }} />
+                <img src={CustomCartIcon} alt="Pembayaran" style={{ height: '60px' }} />
                 
                 {badgeCount > 0 && (
                   <Badge
@@ -567,7 +581,7 @@ function MainLayout() {
                       transform: 'translate(-50%, -50%)',
                       fontSize: '0.7rem',
                       lineHeight: '1',
-                      padding: '3px 6px',
+                      padding: '8px 12px',
                       minWidth: '18px'
                     }}
                   >
