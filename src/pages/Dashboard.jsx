@@ -24,7 +24,7 @@ const modalStyles = {
     backgroundColor: '#f8f9fa',
     borderRadius: '16px',
     width: '95%',
-    maxWidth: '1200px',
+    maxWidth: '1300px',
     height: '100vh',
     maxHeight: '90vh',
     display: 'flex',
@@ -39,7 +39,7 @@ const modalStyles = {
     backgroundColor: '#ffffff',
     borderRadius: '16px',
     width: '90%',
-    maxWidth: '1100px', // Sesuai dengan size='xl'
+    maxWidth: '1300px', // Sesuai dengan size='xl'
     padding: '1.5rem', // Pengganti padding Modal.Body
     boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)',
     transform: 'scale(0.95)',

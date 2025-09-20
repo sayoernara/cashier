@@ -462,7 +462,7 @@ function Retur() {
                                 return (
                                     <Col key={comodity} xs={6} md={4} lg={3} className="product-card-wrapper">
                                         <Card className="shadow-sm border-0 product-card-small h-100">
-                                            <Card.Body className="d-flex flex-column">
+                                            <Card.Body className="d-flex flex-column gap-3">
                                                 <div className="item-image-container" onClick={() => handleSelectProduct(representativeItem.id_item, comodity, selectionMode)}>
                                                     {representativeItem.img ? (
                                                     <img
@@ -474,7 +474,7 @@ function Retur() {
                                                     <CiImageOff size={100} className="text-secondary item-img-small-placeholder"/>
                                                     )}
                                                 </div>
-                                                <Card.Title className="product-title-small text-center mt-2" onClick={() => handleSelectProduct(representativeItem.id_item, comodity, selectionMode)}>
+                                                <Card.Title className="product-title-small text-center" onClick={() => handleSelectProduct(representativeItem.id_item, comodity, selectionMode)}>
                                                     {comodity}
                                                 </Card.Title>
                                                 <div className="weight-buttons-container d-flex flex-wrap gap-1 mt-auto pt-2">

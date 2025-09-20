@@ -172,7 +172,7 @@ input[type=range].custom-slider-input::-moz-range-thumb {
 }
 
 .total-summary-header {
-  font-size: 1rem;
+  font-size: 1.5rem;
   font-weight: 700;
   background-color: #000000;
   color: #ffffff;
@@ -197,7 +197,7 @@ input[type=range].custom-slider-input::-moz-range-thumb {
 
 .total-summary-value {
   font-weight: 700;
-  font-size: 1.3rem;
+  font-size: 1.7rem;
   letter-spacing: 1px;
 }
 
@@ -205,8 +205,8 @@ input[type=range].custom-slider-input::-moz-range-thumb {
   background-color: #111827;
   color: white;
   border-radius: 16px;
-  width: 110px;
-  height: 110px;
+  width: 140px;
+  height: 140px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -215,17 +215,17 @@ input[type=range].custom-slider-input::-moz-range-thumb {
   padding: 10px;
   position: relative;
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  font-size: 1.5rem;
+  font-size: 1.7rem;
   font-weight: 700;
   line-height: 1.2;
 }
 
 .delete-item-icon {
   position: absolute;
-  top: -12px;               /* Disesuaikan dari -10px */
-  right: -12px;              /* Disesuaikan dari -10px */
-  width: 32px;              /* Diubah dari 28px */
-  height: 32px;             /* Diubah dari 28px */
+  top: -14px;               /* Disesuaikan dari -10px */
+  right: -14px;              /* Disesuaikan dari -10px */
+  width: 36px;              /* Diubah dari 28px */
+  height: 36px;             /* Diubah dari 28px */
   background-color: #ef4444;
   color: white;
   border-radius: 50%;
@@ -261,7 +261,7 @@ input[type=range].custom-slider-input::-moz-range-thumb {
 
 .swiper-container {
   width: 100%;
-  height: 80vh;
+  height: 70vh;
   padding-bottom: 40px !important;
   box-sizing: border-box; 
   cursor: grab;
@@ -397,7 +397,7 @@ input[type=range].custom-slider-input::-moz-range-thumb {
 
 .preset-weight-btn {
   width: 155px;
-  height: 90px;
+  height: 110px;
   border-radius: 8px;
   padding: 10px 5px;
   line-height: 1.3;
@@ -458,7 +458,7 @@ input[type=range].custom-slider-input::-moz-range-thumb {
 
 .cart-item-card .item-name { 
   font-weight: 700; 
-  font-size: 1.1rem; /* Ditingkatkan dari 0.9rem */
+  font-size: 1.3rem; /* Ditingkatkan dari 0.9rem */
   background-color: black; 
   color: white; 
   padding: 6px 8px; /* Ditingkatkan dari 4px 5px */
@@ -470,7 +470,7 @@ input[type=range].custom-slider-input::-moz-range-thumb {
 } 
 
 .cart-item-card .item-details { 
-  font-size: 0.9rem; /* Ditingkatkan dari 0.8rem */
+  font-size: 1.1rem; /* Ditingkatkan dari 0.8rem */
   color: #343a40; 
   font-weight: 700; 
   margin-top: 5px; /* Ditingkatkan dari 3px */
@@ -478,7 +478,7 @@ input[type=range].custom-slider-input::-moz-range-thumb {
 
 .cart-item-card .item-price { 
   font-weight: 700; 
-  font-size: 1.2rem; /* Ditingkatkan dari 1.0rem */
+  font-size: 1.5rem; /* Ditingkatkan dari 1.0rem */
   background-color: #28a745; 
   color: white; 
   padding: 5px 8px; /* Ditingkatkan dari 3px 4px */
@@ -502,7 +502,7 @@ input[type=range].custom-slider-input::-moz-range-thumb {
 } 
 
 .cart-item-discount .label { 
-  font-size: 0.8rem; /* Ditingkatkan dari 0.7rem */
+  font-size: 0.9rem; /* Ditingkatkan dari 0.7rem */
   font-weight: 700; 
   color: white; 
   background-color: black; 
@@ -564,15 +564,15 @@ input[type=range].custom-slider-input::-moz-range-thumb {
 
 .btn-remove-from-modal { 
   position: absolute; 
-  top: -12px; /* Disesuaikan */
-  right: -12px; /* Disesuaikan */
-  width: 30px; /* Ditingkatkan dari 24px */
-  height: 30px; /* Ditingkatkan dari 24px */
+  top: -14px; /* Disesuaikan */
+  right: -14px; /* Disesuaikan */
+  width: 34px; /* Ditingkatkan dari 24px */
+  height: 34px; /* Ditingkatkan dari 24px */
   background-color: #dc3545; 
   color: white; 
   border: 2px solid white; 
   border-radius: 50%; 
-  font-size: 1.2rem; /* Ditingkatkan dari 1rem */
+  font-size: 1.4rem; /* Ditingkatkan dari 1rem */
   font-weight: bold; 
   display: flex; 
   align-items: center; 
