@@ -272,6 +272,7 @@ function MainLayout() {
     }
   };
 
+  // --- PERUBAHAN DI FUNGSI INI ---
   const fetchTransaction = async (summaryData) => {
     setLoadingSaveTransaction(true);
 
@@ -294,15 +295,15 @@ function MainLayout() {
 
     try {
       const response = await saveSellTransaction(transactionPayload);
+      // Cek jika response sukses dan memiliki nomor transaksi
       if (response && response.data && response.data.message.number) {
+        // Langsung bersihkan keranjang, tanpa notifikasi
         const updatedCart = [];
         setCart(updatedCart);
         saveCartToStorage(currentCustomer, updatedCart);
-
-        return {
-          success: true,
-          transactionNumber: response.data.message.number,
-        };
+        
+        // **TIDAK ADA RETURN, TIDAK ADA SWAL SUKSES**
+        
       } else {
         throw new Error("Respons dari server tidak valid atau tidak menyertakan nomor transaksi.");
       }
@@ -310,13 +311,14 @@ function MainLayout() {
     } catch (error) {
       setErrorSaveTransaction(error.message);
       Swal.fire('Error', `Gagal menyimpan transaksi: ${error.message}`, 'error');
-      throw error;
-
+      // Kita tidak melempar error lagi agar aplikasi tidak crash
     } finally {
       handleCloseModal();
       setLoadingSaveTransaction(false);
     }
   };
+  // --- BATAS AKHIR PERUBAHAN ---
+
 
   const fetchGoods = useCallback(async () => {
     try {

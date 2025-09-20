@@ -88,10 +88,6 @@ const printReceipt = async (receiptData, storageData) => {
 
     // === HEADER ===
     // Gunakan perintah alignment bawaan printer untuk hasil yang presisi
-    nota_text.push(ESC + "a" + String.fromCharCode(1)); // 1 = Center Alignment
-
-    // Cetak judul dengan font besar
-    nota_text.push(ESC + "!" + String.fromCharCode(48)); // Double Height & Width
     nota_text.push("SAYOERNARA");
 
     // Reset font ke normal dan kurangi spasi baris untuk menghilangkan gap
