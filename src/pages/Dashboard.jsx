@@ -96,7 +96,7 @@ const printReceipt = async (receiptData, storageData) => {
     };
 
     // === HEADER ===
-    nota_text.push(ESC + "E" + String.fromCharCode(1) + ESC + "G" + String.fromCharCode(1) + ESC + "!" + String.fromCharCode(48));
+    nota_text.push(ESC + "!" + String.fromCharCode(48));
     nota_text.push(centerText("SAYOERNARA"));
     nota_text.push(ESC + "!" + String.fromCharCode(0));
     nota_text.push(centerText("SAYUR GROSIR DAN ECERAN"));

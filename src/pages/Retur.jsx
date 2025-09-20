@@ -55,6 +55,7 @@ const printReceipt = async (receiptData, number, storageData) => {
     let receiptText = '';
 
     // === HEADER ===
+    nota_text.push(ESC + "!" + String.fromCharCode(48));
     receiptText += centerText('SAYOERNARA', lebarKertas);
     receiptText += centerText('SAYUR GROSIR DAN ECERAN', lebarKertas);
     receiptText += centerText('08/223344551/0', lebarKertas);
