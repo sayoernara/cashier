@@ -174,7 +174,6 @@ const printReceipt = async (receiptData, storageData) => {
     // --- REDIRECT KE RAWBT ---
     const finalReceiptText = nota_text.join('\n');
     const base64String = btoa(finalReceiptText);
-    const encodedText = encodeURIComponent(finalReceiptText);
     window.location.href = `rawbt:base64,${base64String}`;
 
   } catch (error) {
@@ -605,7 +604,7 @@ function Dashboard() {
                               <Card.Title className="product-title-small text-center">{comodity}</Card.Title>
                               <div className="weight-buttons-container d-flex flex-wrap gap-1 mt-2">
                                 {groupedGoods[comodity].map((sub) => (
-                                  <Card key={sub.id_item} className={`text-center flex-fill border-0 shadow-sm overflow-hidden weight-card-small weight-btn-${sub.weight_txt.replace('/', '-')}`} onClick={() => addToCart(comodity, sub.id_item, sub.weight_Gr, sub.price_per_Gr)}>
+                                  <Card key={`${comodity}-${sub.id_item}-${sub.weight_Gr}`} className={`text-center flex-fill border-0 shadow-sm overflow-hidden weight-card-small weight-btn-${sub.weight_txt.replace('/', '-')}`} onClick={() => addToCart(comodity, sub.id_item, sub.weight_Gr, sub.price_per_Gr)}>
                                     <div className="weight-card-header">{sub.weight_txt}</div>
                                     <div className={`weight-card-body ${sub.weight_txt === "Kg" ? 'highlighted' : ''}`}>
                                       <div className="fw-bolder h5 m-0 lh-1">{sub.stock}</div>
